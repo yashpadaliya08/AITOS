@@ -1,0 +1,575 @@
+/* AITOS Custom Stylesheet */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --aitos-primary: #0d6efd;
+    --aitos-primary-hover: #0b5ed7;
+    --aitos-bg: #f8f9fa;
+    --aitos-sidebar-bg: #ffffff;
+    --aitos-card-bg: #ffffff;
+    --aitos-border-color: #e9ecef;
+    --aitos-text-muted: #6c757d;
+    --aitos-text-dark: #212529;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--aitos-bg);
+    color: var(--aitos-text-dark);
+    font-size: 0.95rem;
+    overflow-x: hidden;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #ced4da;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+/* App Layout */
+.app-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Styling */
+.aitos-sidebar {
+    width: 260px;
+    background-color: var(--aitos-sidebar-bg);
+    border-right: 1px solid var(--aitos-border-color);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+}
+
+.sidebar-brand {
+    padding: 1.5rem 1.25rem;
+    border-bottom: 1px solid var(--aitos-border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sidebar-brand img {
+    height: 32px;
+}
+
+.sidebar-menu {
+    padding: 1.25rem 0;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.menu-label {
+    padding: 0 1.25rem 0.5rem 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--aitos-text-muted);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 1.25rem;
+    color: #495057;
+    text-decoration: none;
+    font-weight: 500;
+    gap: 0.75rem;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.menu-item i {
+    font-size: 1.1rem;
+    width: 20px;
+    color: var(--aitos-text-muted);
+}
+
+.menu-item:hover {
+    background-color: #f1f3f5;
+    color: var(--aitos-primary);
+}
+
+.menu-item:hover i {
+    color: var(--aitos-primary);
+}
+
+.menu-item.active {
+    color: var(--aitos-primary);
+    background-color: rgba(13, 110, 253, 0.05);
+    border-left-color: var(--aitos-primary);
+    font-weight: 600;
+}
+
+.menu-item.active i {
+    color: var(--aitos-primary);
+}
+
+.menu-item.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.sidebar-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--aitos-border-color);
+    background-color: #fafbfc;
+}
+
+/* Main Content Area */
+.main-container {
+    margin-left: 260px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header Styling */
+.aitos-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--aitos-border-color);
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-project-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-project-name {
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin: 0;
+}
+
+.phase-badge {
+    background-color: rgba(13, 110, 253, 0.08);
+    color: var(--aitos-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 50px;
+    border: 1px solid rgba(13, 110, 253, 0.15);
+}
+
+.header-progress-container {
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Footer Styling */
+.aitos-footer {
+    background-color: #ffffff;
+    border-top: 1px solid var(--aitos-border-color);
+    padding: 1rem 2rem;
+    margin-top: auto;
+    font-size: 0.85rem;
+    color: var(--aitos-text-muted);
+}
+
+/* Page Content */
+.page-content {
+    padding: 2rem;
+    max-width: 1300px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Premium Cards */
+.aitos-card {
+    background: var(--aitos-card-bg);
+    border: 1px solid var(--aitos-border-color);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.aitos-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.aitos-card-header {
+    border-bottom: 1px solid var(--aitos-border-color);
+    padding: 1.25rem 1.5rem;
+    background: none;
+    font-weight: 600;
+}
+
+.aitos-card-body {
+    padding: 1.5rem;
+}
+
+/* Wizard Styling */
+.wizard-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    position: relative;
+}
+
+.wizard-steps::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    right: 40px;
+    height: 2px;
+    background-color: var(--aitos-border-color);
+    z-index: 1;
+}
+
+.wizard-progress-bar {
+    position: absolute;
+    top: 20px;
+    left: 40px;
+    height: 2px;
+    background-color: var(--aitos-primary);
+    z-index: 2;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.wizard-step {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+}
+
+.step-number {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    border: 2px solid var(--aitos-border-color);
+    color: var(--aitos-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.wizard-step.active .step-number {
+    border-color: var(--aitos-primary);
+    background-color: var(--aitos-primary);
+    color: #ffffff;
+}
+
+.wizard-step.completed .step-number {
+    border-color: var(--aitos-primary);
+    background-color: #ffffff;
+    color: var(--aitos-primary);
+}
+
+.step-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--aitos-text-muted);
+    transition: color 0.3s ease;
+}
+
+.wizard-step.active .step-label {
+    color: var(--aitos-text-dark);
+}
+
+.wizard-pane {
+    display: none;
+}
+
+.wizard-pane.active {
+    display: block;
+}
+
+/* VS Code Style File Explorer */
+.code-explorer {
+    display: flex;
+    height: 550px;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+    font-size: 0.85rem;
+}
+
+.explorer-sidebar {
+    width: 250px;
+    border-right: 1px solid #2d2d2d;
+    background-color: #252526;
+    display: flex;
+    flex-direction: column;
+}
+
+.explorer-sidebar-title {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #8c8c8c;
+    border-bottom: 1px solid #2d2d2d;
+    letter-spacing: 0.05em;
+}
+
+.explorer-tree {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+}
+
+.tree-node {
+    padding: 0.25rem 1rem;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    gap: 0.5rem;
+    user-select: none;
+}
+
+.tree-node:hover {
+    background-color: #2a2d2e;
+}
+
+.tree-node.active {
+    background-color: #37373d;
+    color: #ffffff;
+}
+
+.tree-node.directory {
+    font-weight: 500;
+}
+
+.tree-node i {
+    font-size: 0.95rem;
+}
+
+.tree-node.file i {
+    color: #519aba;
+}
+
+.tree-node.directory i {
+    color: #e8a838;
+}
+
+.tree-sub-folder {
+    padding-left: 1.25rem;
+    display: block;
+}
+
+.tree-sub-folder.collapsed {
+    display: none;
+}
+
+.explorer-editor {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #1e1e1e;
+}
+
+.editor-tabs {
+    display: flex;
+    background-color: #2d2d2d;
+    height: 35px;
+    align-items: flex-end;
+}
+
+.editor-tab {
+    padding: 0 1rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    background-color: #2d2d2d;
+    border-right: 1px solid #252526;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #969696;
+    gap: 0.5rem;
+}
+
+.editor-tab.active {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border-top: 2px solid var(--aitos-primary);
+}
+
+.editor-tab i {
+    font-size: 0.85rem;
+}
+
+.editor-content {
+    flex-grow: 1;
+    overflow: auto;
+    padding: 1.5rem;
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+/* Drag and Drop Styling */
+.team-task-column {
+    min-height: 250px;
+    background-color: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.team-task-column.dragover {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-color: var(--aitos-primary);
+}
+
+.task-card {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    cursor: grab;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.task-card:active {
+    cursor: grabbing;
+    transform: scale(0.98);
+}
+
+.task-card:hover {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+}
+
+/* Context Compiler Progress Styles */
+.compiler-log {
+    background-color: #121824;
+    color: #a5b4fc;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    border-radius: 8px;
+    padding: 1.5rem;
+    height: 400px;
+    overflow-y: auto;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.compiler-line {
+    margin-bottom: 0.4rem;
+    opacity: 0;
+    transform: translateY(4px);
+    animation: fadeInUp 0.3s forwards;
+}
+
+.compiler-line.success {
+    color: #34d399;
+}
+
+.compiler-line.info {
+    color: #60a5fa;
+}
+
+.compiler-line.warning {
+    color: #fbbf24;
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dashboard Metric Cards */
+.metric-card {
+    border-radius: 10px;
+    border: 1px solid var(--aitos-border-color);
+    background-color: #ffffff;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.metric-icon.blue {
+    background-color: rgba(13, 110, 253, 0.08);
+    color: var(--aitos-primary);
+}
+
+.metric-icon.green {
+    background-color: rgba(25, 135, 84, 0.08);
+    color: #198754;
+}
+
+.metric-icon.purple {
+    background-color: rgba(111, 66, 193, 0.08);
+    color: #6f42c1;
+}
+
+.metric-icon.orange {
+    background-color: rgba(253, 126, 20, 0.08);
+    color: #fd7e14;
+}
+
+.metric-details h5 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.metric-details span {
+    font-size: 0.8rem;
+    color: var(--aitos-text-muted);
+    font-weight: 500;
+}
+
+/* Requirements Cards list */
+.req-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
