@@ -87,7 +87,7 @@
             </div>
             <div class="compiler-log" id="compilerLogContainer">
                 <div class="text-secondary font-monospace" style="opacity: 0.7;">
-                    AITOS V1.0.0 Context Compiler Shell<br>
+                    AITOS V2.0.0 Context Compiler Shell<br>
                     Ready for compilation instruction... Click the button on the left to start.
                 </div>
             </div>
@@ -174,7 +174,7 @@
             iconSpan.innerHTML = `<i class="bi bi-circle"></i>`;
         }
 
-        appendTerminalLine("AITOS COMPILER version 1.0.0 -- bootstrapping environment context", "info");
+        appendTerminalLine("AITOS COMPILER version 2.0.0 -- bootstrapping environment context", "info");
         appendTerminalLine(`Target folder name: ${state.projectName || "AITOS_Project"}/`, "line");
         appendTerminalLine("Data-First Architecture active (JSON -> Markdown compilation)", "line");
         appendTerminalLine("---------------------------------------------------------------", "line");

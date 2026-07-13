@@ -1,0 +1,9 @@
+{
+    "name": "React Framework Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Integrates React framework code generation maps into AITOS.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "ReactPlugin",
+    "namespace": "Plugins\\React"
+}

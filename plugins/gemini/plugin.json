@@ -1,0 +1,9 @@
+{
+    "name": "Gemini AI Provider Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Integrates Google Gemini model configurations and endpoints into AITOS.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "GeminiPlugin",
+    "namespace": "Plugins\\Gemini"
+}

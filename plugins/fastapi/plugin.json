@@ -1,0 +1,9 @@
+{
+    "name": "FastAPI Framework Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Integrates FastAPI framework code generation maps into AITOS.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "FastAPIPlugin",
+    "namespace": "Plugins\\FastAPI"
+}

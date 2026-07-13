@@ -1,0 +1,9 @@
+{
+    "name": "Anthropic Provider Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Integrates Anthropic Claude model configurations and endpoints into AITOS.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "AnthropicPlugin",
+    "namespace": "Plugins\\Anthropic"
+}

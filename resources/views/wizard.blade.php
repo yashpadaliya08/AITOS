@@ -9,7 +9,7 @@
             <h4 class="fw-bold mb-1">Create Project Wizard</h4>
             <p class="text-muted small mb-0">Bootstrap your structured repository workspace context.</p>
         </div>
-        <span class="badge bg-primary px-3 py-2">Version 1.0</span>
+        <span class="badge bg-primary px-3 py-2">Version 2.0</span>
     </div>
     
     <div class="aitos-card-body p-4">

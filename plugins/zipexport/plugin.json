@@ -1,0 +1,9 @@
+{
+    "name": "ZIP Export Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Enables exporting AITOS compiler outputs into a zipped starter repository package.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "ZipExportPlugin",
+    "namespace": "Plugins\\ZipExport"
+}

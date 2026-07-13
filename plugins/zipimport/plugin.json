@@ -1,0 +1,9 @@
+{
+    "name": "ZIP Import Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Enables importing pre-compiled .aitos ZIP packages directly back into the application memory.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "ZipImportPlugin",
+    "namespace": "Plugins\\ZipImport"
+}

@@ -20,8 +20,17 @@ Adhere strictly to this JSON format and key mapping:
 {
     "projectSummary": "Provide a high-fidelity 3-4 sentence paragraph summarizing the product vision, its core purpose, and development goals based on the problem statement.",
     "entities": [
-        "Define Key Entity 1 (e.g. User - attributes, relationships)",
-        "Define Key Entity 2"
+        {
+            "name": "EntityName",
+            "attributes": ["id", "name", "status", "created_at"]
+        }
+    ],
+    "relationships": [
+        {
+            "from": "EntityName",
+            "to": "RelatedEntity",
+            "type": "belongs_to"
+        }
     ],
     "modules": [
         "Define Module 1 (e.g. Authentication Manager - responsibilities)",

@@ -1,0 +1,9 @@
+{
+    "name": "Odoo Framework Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Integrates Odoo framework code generation maps into AITOS.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "OdooPlugin",
+    "namespace": "Plugins\\Odoo"
+}

@@ -19,8 +19,8 @@
             <span class="text-muted">Alignment Status</span>
             <span class="text-primary header-progress-text-el">0% Complete</span>
         </div>
-        <div class="progress" style="height: 6px; border-radius: 50px; background-color: #e9ecef;">
-            <div class="progress-bar progress-bar-striped progress-bar-animated header-progress-bar-el" role="progressbar" style="width: 0%; border-radius: 50px;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        <div class="progress" style="height: 6px; border-radius: 50px; background-color: #e2e8f0;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated progress-bar-premium header-progress-bar-el" role="progressbar" style="width: 0%; border-radius: 50px;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
     </div>
 </header>

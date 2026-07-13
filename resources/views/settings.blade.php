@@ -108,6 +108,35 @@
 
     <!-- Right column layout settings -->
     <div class="col-lg-4">
+        <!-- Platform Plugins Card -->
+        <div class="card aitos-card border-light-subtle shadow-sm mb-4">
+            <div class="aitos-card-header bg-white py-3">
+                <span class="fw-bold text-dark"><i class="bi bi-plugin text-primary me-1"></i> Platform Plugins</span>
+            </div>
+            <div class="aitos-card-body" style="max-height: 400px; overflow-y: auto;">
+                @php
+                    $plugins = \App\Services\Architect\Registry\PluginRegistry::scan();
+                @endphp
+                @if(empty($plugins))
+                    <p class="text-muted small mb-0">No plugins found under `plugins/` directory.</p>
+                @else
+                    <div class="list-group list-group-flush">
+                        @foreach($plugins as $key => $manifest)
+                            <div class="list-group-item px-0 py-2 border-light-subtle d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="text-dark small d-block">{{ $manifest['name'] }}</strong>
+                                    <span class="text-muted" style="font-size: 0.75rem;">v{{ $manifest['version'] }} by {{ $manifest['author'] }}</span>
+                                </div>
+                                <span class="badge {{ $manifest['enabled'] ? 'bg-success' : 'bg-secondary' }}">
+                                    {{ $manifest['enabled'] ? 'Active' : 'Disabled' }}
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+
         <div class="card aitos-card border-light-subtle shadow-sm mb-4">
             <div class="aitos-card-header bg-white">
                 <span class="fw-bold"><i class="bi bi-palette text-primary me-1"></i> Theme & Display</span>
@@ -153,7 +182,7 @@
             document.getElementById("keyGemini").value = state.apiKeys.gemini || "";
             document.getElementById("keyOpenAI").value = state.apiKeys.openai || "";
             document.getElementById("keyAnthropic").value = state.apiKeys.anthropic || "";
-            document.getElementById("keyDefaultProvider").value = state.apiKeys.defaultProvider || "gemini";
+            document.getElementById("keyDefaultProvider").value = state.apiKeys.defaultProvider || "openai";
         }
     }
 

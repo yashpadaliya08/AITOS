@@ -13,10 +13,37 @@
             <small class="text-muted d-block uppercase font-monospace" style="font-size: 0.65rem;">Active Blueprint Version</small>
             <span class="fw-bold fs-5 text-dark" id="blueprintVersionBadge">v1.0.0-Draft</span>
         </div>
+        <button type="button" class="btn btn-outline-primary fw-semibold px-3 py-2" onclick="generateBlueprintsWithAi()">
+            <i class="bi bi-arrow-repeat me-1"></i> Re-generate with AI
+        </button>
         <span class="badge bg-secondary px-3 py-2">Phase 3: Blueprint</span>
     </div>
 </div>
 
+<!-- API Key Configuration Missing Banner -->
+<div id="apiKeyMissingBanner" class="alert alert-danger border-danger border-opacity-25 d-none justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-shield-slash-fill text-danger fs-5"></i>
+        <div>
+            <strong class="text-dark">AI API Key Configuration Required</strong>
+            <span class="text-muted d-block small">No API key is configured for your default AI provider. Please set your credentials before continuing.</span>
+        </div>
+    </div>
+    <a href="/settings" class="btn btn-danger btn-sm fw-semibold">
+        <i class="bi bi-gear-fill me-1"></i> Go to Settings
+    </a>
+</div>
+
+<!-- Full Blueprint Loading View -->
+<div id="blueprintLoadingOverlay" class="d-none flex-column align-items-center justify-content-center py-5 my-5 text-center">
+    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <h5 class="fw-bold text-dark mb-1">Generating Dynamic Blueprints...</h5>
+    <p class="text-muted small" id="loadingOverlaySubtitle">Synthesizing system architecture blueprints using AI. This may take 10-15 seconds...</p>
+</div>
+
+<div id="blueprintContainer" class="d-none">
 <div class="row">
     <div class="col-lg-9 mb-4">
         <div class="card aitos-card border-light-subtle shadow-sm">
@@ -57,6 +84,18 @@
                         <div class="p-3 bg-light rounded border border-light-subtle font-monospace" style="font-size: 0.9rem; white-space: pre-wrap;" id="view-bp-business"></div>
                         <div class="d-none" id="edit-box-business">
                             <textarea id="input-bp-business" class="form-control font-monospace border-light-subtle" rows="12" style="font-size: 0.85rem;"></textarea>
+                            
+                            <div class="mt-3 p-3 bg-light rounded border border-light-subtle">
+                                <label class="form-label small fw-bold text-dark"><i class="bi bi-robot text-success"></i> AI Copilot Refinement Assistant</label>
+                                <div class="input-group">
+                                    <input type="text" id="ai-prompt-business" class="form-control border-light-subtle" placeholder="e.g. Add business flow for trial periods...">
+                                    <button type="button" class="btn btn-primary" onclick="refineWithAi('business')" id="ai-btn-business"><i class="bi bi-magic me-1"></i> Refine Blueprint</button>
+                                </div>
+                                <div id="ai-spinner-business" class="d-none text-muted small mt-2">
+                                    <span class="spinner-border spinner-border-sm text-primary me-1" role="status" aria-hidden="true"></span> Refining blueprint layout...
+                                </div>
+                            </div>
+
                             <div class="d-flex gap-2 justify-content-end mt-3">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditBp('business')">Cancel</button>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="saveBlueprint('business')">Save Suggestion</button>
@@ -73,6 +112,18 @@
                         <div class="p-3 bg-light rounded border border-light-subtle font-monospace" style="font-size: 0.9rem; white-space: pre-wrap;" id="view-bp-database"></div>
                         <div class="d-none" id="edit-box-database">
                             <textarea id="input-bp-database" class="form-control font-monospace border-light-subtle" rows="12" style="font-size: 0.85rem;"></textarea>
+
+                            <div class="mt-3 p-3 bg-light rounded border border-light-subtle">
+                                <label class="form-label small fw-bold text-dark"><i class="bi bi-robot text-success"></i> AI Copilot Refinement Assistant</label>
+                                <div class="input-group">
+                                    <input type="text" id="ai-prompt-database" class="form-control border-light-subtle" placeholder="e.g. Optimize indexes for user queries...">
+                                    <button type="button" class="btn btn-primary" onclick="refineWithAi('database')" id="ai-btn-database"><i class="bi bi-magic me-1"></i> Refine Blueprint</button>
+                                </div>
+                                <div id="ai-spinner-database" class="d-none text-muted small mt-2">
+                                    <span class="spinner-border spinner-border-sm text-primary me-1" role="status" aria-hidden="true"></span> Refining database schema...
+                                </div>
+                            </div>
+
                             <div class="d-flex gap-2 justify-content-end mt-3">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditBp('database')">Cancel</button>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="saveBlueprint('database')">Save Suggestion</button>
@@ -89,6 +140,18 @@
                         <div class="p-3 bg-light rounded border border-light-subtle font-monospace" style="font-size: 0.9rem; white-space: pre-wrap;" id="view-bp-technical"></div>
                         <div class="d-none" id="edit-box-technical">
                             <textarea id="input-bp-technical" class="form-control font-monospace border-light-subtle" rows="12" style="font-size: 0.85rem;"></textarea>
+
+                            <div class="mt-3 p-3 bg-light rounded border border-light-subtle">
+                                <label class="form-label small fw-bold text-dark"><i class="bi bi-robot text-success"></i> AI Copilot Refinement Assistant</label>
+                                <div class="input-group">
+                                    <input type="text" id="ai-prompt-technical" class="form-control border-light-subtle" placeholder="e.g. Map security policies and middlewares...">
+                                    <button type="button" class="btn btn-primary" onclick="refineWithAi('technical')" id="ai-btn-technical"><i class="bi bi-magic me-1"></i> Refine Blueprint</button>
+                                </div>
+                                <div id="ai-spinner-technical" class="d-none text-muted small mt-2">
+                                    <span class="spinner-border spinner-border-sm text-primary me-1" role="status" aria-hidden="true"></span> Refining tech designs...
+                                </div>
+                            </div>
+
                             <div class="d-flex gap-2 justify-content-end mt-3">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditBp('technical')">Cancel</button>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="saveBlueprint('technical')">Save Suggestion</button>
@@ -105,6 +168,18 @@
                         <div class="p-3 bg-light rounded border border-light-subtle font-monospace" style="font-size: 0.9rem; white-space: pre-wrap;" id="view-bp-ui"></div>
                         <div class="d-none" id="edit-box-ui">
                             <textarea id="input-bp-ui" class="form-control font-monospace border-light-subtle" rows="12" style="font-size: 0.85rem;"></textarea>
+
+                            <div class="mt-3 p-3 bg-light rounded border border-light-subtle">
+                                <label class="form-label small fw-bold text-dark"><i class="bi bi-robot text-success"></i> AI Copilot Refinement Assistant</label>
+                                <div class="input-group">
+                                    <input type="text" id="ai-prompt-ui" class="form-control border-light-subtle" placeholder="e.g. Structure dashboard layout pages grid...">
+                                    <button type="button" class="btn btn-primary" onclick="refineWithAi('ui')" id="ai-btn-ui"><i class="bi bi-magic me-1"></i> Refine Blueprint</button>
+                                </div>
+                                <div id="ai-spinner-ui" class="d-none text-muted small mt-2">
+                                    <span class="spinner-border spinner-border-sm text-primary me-1" role="status" aria-hidden="true"></span> Refining interface spec...
+                                </div>
+                            </div>
+
                             <div class="d-flex gap-2 justify-content-end mt-3">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="cancelEditBp('ui')">Cancel</button>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="saveBlueprint('ui')">Save Suggestion</button>
@@ -155,6 +230,7 @@
         </button>
     </div>
 </div>
+</div>
 
 <!-- Request Changes Modal -->
 <div class="modal fade" id="changeRequestModal" tabindex="-1" aria-labelledby="changeRequestModalLabel" aria-hidden="true">
@@ -185,9 +261,101 @@
     let draftSuffix = 0; // Simulated minor version increments on edit
 
     document.addEventListener("DOMContentLoaded", () => {
-        loadBlueprintsData();
-        updateRegistryInfo();
+        checkBlueprintState();
     });
+
+    async function checkBlueprintState() {
+        const state = getProjectState();
+        
+        const isMock = (txt) => {
+            if (!txt) return true;
+            return txt.includes("### Business Domain Map") || 
+                   txt.includes("### Database Schema Outline") || 
+                   txt.includes("### Technical Blueprint & Architecture") || 
+                   txt.includes("### User Interface Specifications") ||
+                   txt.includes("Not generated") ||
+                   txt.trim() === "";
+        };
+
+        const needsGen = !state.blueprints || 
+                         !state.blueprints.aiGenerated || 
+                         isMock(state.blueprints.business) || 
+                         isMock(state.blueprints.database) || 
+                         isMock(state.blueprints.technical) || 
+                         isMock(state.blueprints.ui);
+
+        if (needsGen) {
+            await generateBlueprintsWithAi();
+        } else {
+            document.getElementById("blueprintContainer").classList.remove("d-none");
+            loadBlueprintsData();
+            updateRegistryInfo();
+        }
+    }
+
+    async function generateBlueprintsWithAi() {
+        const state = getProjectState();
+        const provider = (state.apiKeys && state.apiKeys.defaultProvider) || 'openai';
+        const apiKey = state.apiKeys ? state.apiKeys[provider] : '';
+
+        if (!apiKey) {
+            document.getElementById("apiKeyMissingBanner").classList.remove("d-none");
+            return;
+        }
+
+        document.getElementById("apiKeyMissingBanner").classList.add("d-none");
+        document.getElementById("blueprintContainer").classList.add("d-none");
+        
+        const loader = document.getElementById("blueprintLoadingOverlay");
+        loader.classList.remove("d-none");
+        loader.classList.add("d-flex");
+
+        let reqsText = "";
+        if (state.requirements) {
+            reqsText = "Entities:\n" + state.requirements.entities + "\n\nModules:\n" + state.requirements.modules + "\n\nRoles:\n" + state.requirements.roles + "\n\nBusiness Rules:\n" + state.requirements.businessRules;
+        }
+
+        try {
+            const response = await fetch('/api/generate-blueprints', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    project_name: state.projectName || "AITOS Project",
+                    project_goal: state.projectGoal || "Hackathon",
+                    problem_statement: state.problemStatement || "",
+                    requirements: reqsText,
+                    provider: provider,
+                    api_key: apiKey
+                })
+            });
+
+            const data = await response.json();
+            if (data.success && data.blueprints) {
+                state.blueprints.business = data.blueprints.business;
+                state.blueprints.database = data.blueprints.database;
+                state.blueprints.technical = data.blueprints.technical;
+                state.blueprints.ui = data.blueprints.ui;
+                state.blueprints.aiGenerated = true;
+                
+                saveProjectState(state);
+
+                loader.classList.add("d-none");
+                loader.classList.remove("d-flex");
+                document.getElementById("blueprintContainer").classList.remove("d-none");
+                
+                loadBlueprintsData();
+                updateRegistryInfo();
+            } else {
+                alert("AI Generation Error: " + (data.message || "Failed to generate blueprints."));
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Connection Error: AITOS AI Controller returned an error or timed out. Please check your PHP console or try again.");
+        }
+    }
 
     function loadBlueprintsData() {
         const state = getProjectState();
@@ -326,6 +494,63 @@
         setTimeout(() => {
             window.location.href = "/team";
         }, 800);
+    }
+
+    async function refineWithAi(bp) {
+        const promptInput = document.getElementById(`ai-prompt-${bp}`);
+        const instruction = promptInput.value.trim();
+        if (!instruction) {
+            alert("Please enter a refinement instruction.");
+            return;
+        }
+
+        const state = getProjectState();
+        const provider = (state.apiKeys && state.apiKeys.defaultProvider) || 'openai';
+        const apiKey = state.apiKeys ? state.apiKeys[provider] : '';
+
+        if (!apiKey) {
+            alert("No API key configured for the default AI provider. Please configure it in System Settings first!");
+            return;
+        }
+
+        const content = document.getElementById(`input-bp-${bp}`).value;
+        const spinner = document.getElementById(`ai-spinner-${bp}`);
+        const btn = document.getElementById(`ai-btn-${bp}`);
+
+        // Show spinner, disable button
+        spinner.classList.remove("d-none");
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/refine-blueprint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    blueprint_type: bp,
+                    blueprint_content: content,
+                    instruction: instruction,
+                    provider: provider,
+                    api_key: apiKey
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById(`input-bp-${bp}`).value = data.refined_content;
+                promptInput.value = "";
+                alert("Blueprint successfully refined by AI Copilot! Review and save suggestions to lock changes.");
+            } else {
+                alert("AI Refinement Error: " + (data.message || "Failed to compile response."));
+            }
+        } catch (err) {
+            alert("Network Error: Failed to contact AITOS AI Controller.");
+        } finally {
+            spinner.classList.add("d-none");
+            btn.disabled = false;
+        }
     }
 </script>
 @endsection

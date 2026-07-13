@@ -1,0 +1,9 @@
+{
+    "name": "Node Framework Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Integrates Express/Node framework code generation maps into AITOS.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "NodePlugin",
+    "namespace": "Plugins\\Node"
+}

@@ -6,7 +6,7 @@
             <i class="bi bi-cpu-fill"></i>
             AITOS
         </span>
-        <span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.65rem;">V1.0</span>
+        <span class="badge bg-light text-secondary border font-monospace" style="font-size: 0.65rem;">V2.0</span>
     </div>
 
     <div class="sidebar-menu">

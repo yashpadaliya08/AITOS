@@ -6,55 +6,81 @@ class AnalysisResultValidator
 {
     /**
      * Clean and validate the raw text response from the AI provider.
+     * Returns a fully-typed array matching the expected requirements schema.
      */
     public static function validateAndClean(string $rawResponse): array
     {
         $cleaned = trim($rawResponse);
 
-        // Strip markdown codeblocks (```json ... ```)
-        if (str_starts_with($cleaned, '```')) {
-            $cleaned = preg_replace('/^```(?:json)?|```$/i', '', $cleaned);
-            $cleaned = trim($cleaned);
-        }
+        // Strip all markdown code fences regardless of position (```json ... ```)
+        $cleaned = preg_replace('/```(?:json)?\s*/i', '', $cleaned);
+        $cleaned = preg_replace('/```\s*/i', '', $cleaned);
+        $cleaned = trim($cleaned);
 
-        // Try decoding
+        // Attempt JSON decode
         $decoded = json_decode($cleaned, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception("The AI did not return a valid JSON object: " . json_last_error_msg() . "\nRaw Response: " . substr($rawResponse, 0, 500));
+            throw new \Exception(
+                "The AI did not return a valid JSON object: " . json_last_error_msg() .
+                "\nRaw Response (first 500 chars): " . substr($rawResponse, 0, 500)
+            );
         }
 
-        // Ensure all required keys exist, fill in defaults if missing
-        $requiredKeys = [
-            'projectSummary' => 'string',
-            'entities' => 'array',
-            'modules' => 'array',
-            'roles' => 'array',
-            'businessRules' => 'array',
-            'functionalRequirements' => 'array',
+        if (!is_array($decoded)) {
+            throw new \Exception("AI response decoded to a non-array type. Expected JSON object.");
+        }
+
+        // Schema definition: key => expected type
+        $schema = [
+            'projectSummary'            => 'string',
+            'entities'                  => 'array',
+            'relationships'             => 'array',
+            'modules'                   => 'array',
+            'roles'                     => 'array',
+            'businessRules'             => 'array',
+            'functionalRequirements'    => 'array',
             'nonFunctionalRequirements' => 'array',
-            'assumptions' => 'array',
-            'risks' => 'array',
-            'userStories' => 'array',
-            'suggestedFolderStructure' => 'array',
-            'suggestedTechnologyStack' => 'assoc',
-            'implementationPhases' => 'array',
-            'aiNotes' => 'array'
+            'assumptions'               => 'array',
+            'risks'                     => 'array',
+            'userStories'               => 'array',
+            'suggestedFolderStructure'  => 'array',
+            'suggestedTechnologyStack'  => 'assoc',
+            'implementationPhases'      => 'array',
+            'aiNotes'                   => 'array',
         ];
 
-        foreach ($requiredKeys as $key => $type) {
+        foreach ($schema as $key => $expectedType) {
             if (!isset($decoded[$key])) {
-                if ($type === 'string') {
-                    $decoded[$key] = '';
-                } elseif ($type === 'assoc') {
-                    $decoded[$key] = [];
-                } else {
-                    $decoded[$key] = [];
-                }
-            } else {
-                // Type safety compliance checks
-                if ($type === 'array' && !is_array($decoded[$key])) {
-                    $decoded[$key] = [$decoded[$key]];
-                }
+                // Provide typed defaults for missing keys
+                $decoded[$key] = match ($expectedType) {
+                    'string' => '',
+                    'assoc'  => (object) [],
+                    default  => [],
+                };
+                continue;
+            }
+
+            // Coerce types so downstream code always gets consistent shapes
+            switch ($expectedType) {
+                case 'string':
+                    if (!is_string($decoded[$key])) {
+                        $decoded[$key] = (string) $decoded[$key];
+                    }
+                    break;
+
+                case 'array':
+                    if (!is_array($decoded[$key])) {
+                        // Wrap scalar value into single-item array
+                        $decoded[$key] = [$decoded[$key]];
+                    }
+                    break;
+
+                case 'assoc':
+                    if (!is_array($decoded[$key]) || array_is_list($decoded[$key])) {
+                        // If it's a sequential list (or not an array), reset to empty assoc
+                        $decoded[$key] = [];
+                    }
+                    break;
             }
         }
 

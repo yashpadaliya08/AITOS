@@ -3,6 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Services\Architect\ArchitectEngine;
+use App\Services\Architect\DTO\ManifestDto;
+use App\Services\Architect\Registry\HookSystem;
+use App\Services\Architect\Registry\FrameworkRegistry;
+use App\Services\Architect\Utils\AISessionManager;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 class ExportController extends Controller
@@ -12,7 +18,6 @@ class ExportController extends Controller
      */
     public function download(Request $request)
     {
-        // Parse the sent JSON payload
         $stateJson = $request->input('project_state');
         if (!$stateJson) {
             return redirect()->back()->with('error', 'No compilation state found.');
@@ -23,220 +28,414 @@ class ExportController extends Controller
             return redirect()->back()->with('error', 'Invalid compilation state.');
         }
 
-        $projectName = trim($state['projectName']);
-        // Sanitize project name for directory use
+        // Run the ArchitectEngine pipeline
+        $orchestrator  = new ArchitectEngine();
+        $pipelineResult = $orchestrator->execute($state);
+
+        $compiledState = $pipelineResult['state'];
+        $report        = $pipelineResult['report'];
+
+        $projectName     = trim($compiledState['projectName']);
         $safeProjectName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $projectName ?: 'AITOS_Project');
-        
-        // Setup temporary file path
+
+        HookSystem::doAction('BeforeExport', $compiledState);
+
+        // Create temp file — must be cleaned up even on errors
         $zipFileName = tempnam(sys_get_temp_dir(), 'aitos_') . '.zip';
 
-        $zip = new ZipArchive();
-        if ($zip->open($zipFileName, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            return response()->json(['error' => 'Failed to initialize Zip compiler.'], 500);
+        try {
+            $zip = new ZipArchive();
+            if ($zip->open($zipFileName, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                throw new \RuntimeException('Failed to initialize Zip compiler.');
+            }
+
+            // ---- 1. Root Manifest & Reports ----
+            $manifest = new ManifestDto([
+                'projectName'      => $projectName,
+                'framework'        => $compiledState['techStack']['framework'] ?? 'laravel',
+                'blueprintVersion' => $compiledState['blueprints']['version'] ?? '1.0.0',
+            ]);
+            $zip->addFromString($safeProjectName . '/.aitos/manifest.json', $manifest->toJson());
+
+            // Derive real readiness values from the actual pipeline report
+            $executedCount = count($report['executed_engines'] ?? []);
+            $totalEngines  = 13; // total engines in the pipeline
+            $warningCount  = count($report['warnings'] ?? []);
+            $errorCount    = count($report['errors']   ?? []);
+            $readinessPct  = $totalEngines > 0
+                ? round(($executedCount / $totalEngines) * 100) . '%'
+                : '0%';
+
+            $generationLog = [
+                'engines'  => array_map(fn($e) => $e['name'], $report['executed_engines'] ?? []),
+                'duration' => round(($report['duration_ms'] ?? 0) / 1000, 2) . 's',
+                'warnings' => array_map(fn($w) => $w['message'], $report['warnings'] ?? []),
+            ];
+            $zip->addFromString($safeProjectName . '/.aitos/reports/generation_log.json',     json_encode($generationLog, JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/reports/pipeline_report.json',    json_encode($report, JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/reports/architecture_review.json', json_encode([
+                'status'    => $errorCount > 0 ? 'failed' : ($warningCount > 0 ? 'passed_with_warnings' : 'approved'),
+                'reviewer'  => 'AITOS Compliance Gate',
+                'timestamp' => date('c'),
+                'metrics'   => [
+                    'readiness_score' => $readinessPct,
+                    'checks_passed'   => $executedCount,
+                    'total_checks'    => $totalEngines,
+                    'warnings'        => $warningCount,
+                    'errors'          => $errorCount,
+                ],
+            ], JSON_PRETTY_PRINT));
+
+            $zip->addFromString($safeProjectName . '/.aitos/ai_sessions/.gitkeep', '');
+
+            // ---- 2. Root Markdown Files ----
+            $docs = $compiledState['documentation'] ?? [];
+            $zip->addFromString($safeProjectName . '/README.md',           $docs['README.md']           ?? '# Project');
+            $zip->addFromString($safeProjectName . '/START_HERE.md',       $docs['START_HERE.md']       ?? '# Start Here');
+            $zip->addFromString($safeProjectName . '/PROJECT_SUMMARY.md',  $docs['PROJECT_SUMMARY.md']  ?? '# Summary');
+
+            // ---- 3. Data JSON Files ----
+            $zip->addFromString($safeProjectName . '/.aitos/data/project.json', json_encode([
+                'name'        => $projectName,
+                'description' => $compiledState['projectDescription'] ?? '',
+                'goal'        => $compiledState['projectGoal']        ?? '',
+                'version'     => '1.0.0',
+                'created_at'  => date('c'),
+            ], JSON_PRETTY_PRINT));
+
+            $zip->addFromString($safeProjectName . '/.aitos/data/requirements.json',       json_encode($compiledState['requirements']      ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/knowledge_graph.json',    json_encode($compiledState['knowledgeGraph']     ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/database_schema.json',    json_encode($compiledState['databaseSchema']     ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/api_design.json',         json_encode($compiledState['apiDesign']          ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/ui_blueprint.json',       json_encode($compiledState['uiBlueprint']        ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/project_plan.json',       json_encode($compiledState['projectPlan']        ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/decisions.json',          json_encode($compiledState['decisions']          ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/code_generation_model.json', json_encode($compiledState['codeGenerationModel'] ?? [], JSON_PRETTY_PRINT));
+            $zip->addFromString($safeProjectName . '/.aitos/data/rules.json',              json_encode($this->splitLines($compiledState['requirements']['businessRules'] ?? ''), JSON_PRETTY_PRINT));
+
+            // ---- 4. Blueprint JSON Files ----
+            $blueprints = $compiledState['blueprints'] ?? [];
+            foreach (['business', 'database', 'technical', 'ui'] as $bpKey) {
+                $zip->addFromString(
+                    $safeProjectName . "/.aitos/blueprints/{$bpKey}_blueprint.json",
+                    json_encode([
+                        'version'   => $blueprints['version'] ?? '1.0.0',
+                        'status'    => $blueprints['status']  ?? 'Draft',
+                        'blueprint' => $blueprints[$bpKey]    ?? '',
+                    ], JSON_PRETTY_PRINT)
+                );
+            }
+
+            // ---- 5. Planning ----
+            $zip->addFromString($safeProjectName . '/.aitos/planning/project_plan.json', json_encode($compiledState['projectPlan'] ?? [], JSON_PRETTY_PRINT));
+
+            // ---- 6. Context Markdown Files ----
+            $contexts = $compiledState['compiledContexts'] ?? [];
+            foreach (['CURRENT_CONTEXT.md', 'BACKEND_CONTEXT.md', 'FRONTEND_CONTEXT.md', 'DATABASE_CONTEXT.md', 'ARCHITECTURE_CONTEXT.md', 'TEAM_CONTEXT.md'] as $ctxFile) {
+                $zip->addFromString($safeProjectName . '/.aitos/context/' . $ctxFile, $contexts[$ctxFile] ?? "# {$ctxFile}");
+            }
+
+            // Workspace memory markdown files
+            $workspaceMemory = $compiledState['workspaceState']['memory'] ?? [];
+            foreach ($workspaceMemory as $filename => $content) {
+                $zip->addFromString($safeProjectName . '/.aitos/context/' . $filename, $content);
+            }
+
+            // ---- 6.3 Workspace JSON Files ----
+            $workspaceState = $compiledState['workspaceState'] ?? [];
+            if (isset($workspaceState['workspace'])) {
+                $zip->addFromString($safeProjectName . '/.aitos/workspace/workspace.json',    json_encode($workspaceState['workspace'], JSON_PRETTY_PRINT));
+            }
+            if (isset($workspaceState['task_contexts'])) {
+                $zip->addFromString($safeProjectName . '/.aitos/workspace/task_context.json', json_encode($workspaceState['task_contexts'], JSON_PRETTY_PRINT));
+            }
+
+            // ---- 6.4 Handoff ----
+            if (isset($workspaceState['handoff'])) {
+                $zip->addFromString($safeProjectName . '/.aitos/handoff/handoff.md', $workspaceState['handoff']);
+            }
+
+            // ---- 6.5 Prompt Packs ----
+            $prompts = $compiledState['promptPacks']['files'] ?? [];
+            foreach ($prompts as $filename => $content) {
+                $zip->addFromString($safeProjectName . '/.aitos/prompts/' . $filename, $content);
+            }
+
+            // ---- 6.6 AI Sessions ----
+            $aiSessions = $compiledState['aiSessions'] ?? [];
+            if (!empty($aiSessions)) {
+                $formattedSessions = AISessionManager::formatSessions($aiSessions);
+                foreach ($formattedSessions as $filename => $content) {
+                    $zip->addFromString($safeProjectName . '/.aitos/ai_sessions/' . $filename, $content);
+                }
+            }
+
+            // ---- 6.7 Framework Config Files ----
+            $framework = $compiledState['techStack']['framework'] ?? 'laravel';
+            $provider  = FrameworkRegistry::get($framework);
+            if ($provider) {
+                foreach ($provider->getConfigFileTemplates() as $filename => $content) {
+                    $zip->addFromString($safeProjectName . '/.aitos/framework/' . $filename, $content);
+                }
+            }
+
+            // ---- 7. Documentation Markdown ----
+            foreach (['README.md', 'START_HERE.md', 'PROJECT_SUMMARY.md', 'ARCHITECTURE.md', 'TEAM_GUIDE.md', 'API_GUIDE.md', 'DATABASE_GUIDE.md'] as $docFile) {
+                $zip->addFromString(
+                    $safeProjectName . '/.aitos/documentation/' . $docFile,
+                    $docs[$docFile] ?? "# {$docFile}"
+                );
+            }
+
+            // ---- 7.5 Framework Scaffold Files ----
+            $scaffold = $compiledState['repositoryScaffold'] ?? [];
+            if (!empty($scaffold['files'])) {
+                foreach ($scaffold['files'] as $filepath => $filecontent) {
+                    $zip->addFromString($safeProjectName . '/' . $filepath, $filecontent);
+                }
+            }
+
+            // ---- 8. Config Register ----
+            $zip->addFromString($safeProjectName . '/.aitos/config/config.json', json_encode([
+                'aitos_version'     => '1.5.0',
+                'last_compile_date' => date('c'),
+                'git_sync_enabled'  => true,
+            ], JSON_PRETTY_PRINT));
+
+            $zip->close();
+
+        } catch (\Throwable $e) {
+            // Always clean up the temp file even on failure
+            if (file_exists($zipFileName)) {
+                @unlink($zipFileName);
+            }
+            return response()->json(['error' => 'Export failed: ' . $e->getMessage()], 500);
         }
 
-        // 1. Core Markdown Files in root folder
-        $readmeContent = $this->buildReadme($state);
-        $startHereContent = $this->buildStartHere($state);
-        $summaryContent = $this->buildSummary($state);
+        HookSystem::doAction('AfterExport', $compiledState);
 
-        $zip->addFromString($safeProjectName . '/README.md', $readmeContent);
-        $zip->addFromString($safeProjectName . '/START_HERE.md', $startHereContent);
-        $zip->addFromString($safeProjectName . '/PROJECT_SUMMARY.md', $summaryContent);
-
-        // 2. Data Register Files (.aitos/data/)
-        $zip->addFromString($safeProjectName . '/.aitos/data/project.json', json_encode([
-            'name' => $state['projectName'],
-            'description' => $state['projectDescription'],
-            'goal' => $state['projectGoal'],
-            'version' => '1.0.0',
-            'created_at' => date('c')
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
-        $zip->addFromString($safeProjectName . '/.aitos/data/business_blueprint.json', json_encode([
-            'version' => '1.0.0',
-            'blueprint' => $state['blueprints']['business'] ?? ''
-        ], JSON_PRETTY_PRINT));
-
-        $zip->addFromString($safeProjectName . '/.aitos/data/database_blueprint.json', json_encode([
-            'version' => '1.0.0',
-            'blueprint' => $state['blueprints']['database'] ?? ''
-        ], JSON_PRETTY_PRINT));
-
-        $zip->addFromString($safeProjectName . '/.aitos/data/technical_blueprint.json', json_encode([
-            'version' => '1.0.0',
-            'blueprint' => $state['blueprints']['technical'] ?? ''
-        ], JSON_PRETTY_PRINT));
-
-        $zip->addFromString($safeProjectName . '/.aitos/data/ui_blueprint.json', json_encode([
-            'version' => '1.0.0',
-            'blueprint' => $state['blueprints']['ui'] ?? ''
-        ], JSON_PRETTY_PRINT));
-
-        $zip->addFromString($safeProjectName . '/.aitos/data/team.json', json_encode($state['teamMembers'] ?? [], JSON_PRETTY_PRINT));
-        $zip->addFromString($safeProjectName . '/.aitos/data/tasks.json', json_encode($state['tasks'] ?? [], JSON_PRETTY_PRINT));
-
-        $zip->addFromString($safeProjectName . '/.aitos/data/rules.json', json_encode($this->splitLines($state['requirements']['businessRules'] ?? ''), JSON_PRETTY_PRINT));
-        $zip->addFromString($safeProjectName . '/.aitos/data/user_stories.json', json_encode($this->splitLines($state['requirements']['userStories'] ?? ''), JSON_PRETTY_PRINT));
-        $zip->addFromString($safeProjectName . '/.aitos/data/non_functional_requirements.json', json_encode($this->splitLines($state['requirements']['nonFunctionalRequirements'] ?? ''), JSON_PRETTY_PRINT));
-        $zip->addFromString($safeProjectName . '/.aitos/data/suggested_folder_structure.json', json_encode($this->splitLines($state['requirements']['suggestedFolderStructure'] ?? ''), JSON_PRETTY_PRINT));
-        $zip->addFromString($safeProjectName . '/.aitos/data/implementation_phases.json', json_encode($this->splitLines($state['requirements']['implementationPhases'] ?? ''), JSON_PRETTY_PRINT));
-        $zip->addFromString($safeProjectName . '/.aitos/data/ai_notes.json', json_encode($this->splitLines($state['requirements']['aiNotes'] ?? ''), JSON_PRETTY_PRINT));
-        $zip->addFromString($safeProjectName . '/.aitos/data/decisions.json', json_encode($state['decisions'] ?? [], JSON_PRETTY_PRINT));
-
-        // 3. AI Context Markdown Layers (.aitos/context/)
-        $currentContext = $this->buildCurrentContext($state);
-        $backendContext = $this->buildBackendContext($state);
-        $frontendContext = $this->buildFrontendContext($state);
-        $databaseContext = $this->buildDatabaseContext($state);
-        $genericContext = $this->buildGenericContext($state);
-
-        $zip->addFromString($safeProjectName . '/.aitos/context/CURRENT_CONTEXT.md', $currentContext);
-        $zip->addFromString($safeProjectName . '/.aitos/context/BACKEND_CONTEXT.md', $backendContext);
-        $zip->addFromString($safeProjectName . '/.aitos/context/FRONTEND_CONTEXT.md', $frontendContext);
-        $zip->addFromString($safeProjectName . '/.aitos/context/DATABASE_CONTEXT.md', $databaseContext);
-        $zip->addFromString($safeProjectName . '/.aitos/context/GENERIC_CONTEXT.md', $genericContext);
-
-        // 4. Config register (.aitos/config/config.json)
-        $zip->addFromString($safeProjectName . '/.aitos/config/config.json', json_encode([
-            'aitos_version' => '1.0.0',
-            'last_compile_date' => date('c'),
-            'git_sync_enabled' => $state['config']['git_sync_enabled'] ?? true
-        ], JSON_PRETTY_PRINT));
-
-        // 5. Snapshot backup (.aitos/snapshots/v1.0.0-snapshot.json)
-        $zip->addFromString($safeProjectName . '/.aitos/snapshots/v1.0.0-snapshot.json', json_encode([
-            'snapshot_id' => 'snap-v1.0.0',
-            'timestamp' => date('c'),
-            'blueprint_version' => '1.0.0',
-            'project_name' => $projectName,
-            'md5' => md5($stateJson)
-        ], JSON_PRETTY_PRINT));
-
-        $zip->close();
-
-        // Send file stream response, and register callback to remove temp zip
         return response()->download($zipFileName, $safeProjectName . '_aitos_package.zip')->deleteFileAfterSend(true);
     }
 
-    private function buildReadme($state)
+    /**
+     * Split a string or array of business rules into a clean array of strings.
+     */
+    private function splitLines(mixed $text): array
     {
-        return "# " . $state['projectName'] . "\n\n" .
-            $state['projectDescription'] . "\n\n" .
-            "## Development Stack\n" .
-            "- **Framework:** " . ($state['techStack']['framework'] ?? 'Laravel') . "\n" .
-            "- **Database:** " . ($state['techStack']['database'] ?? 'SQLite') . "\n" .
-            "- **Frontend:** " . ($state['techStack']['frontend'] ?? 'Blade') . "\n\n" .
-            "## AITOS Context System\n" .
-            "This repository is pre-configured with AITOS (AI Team Operating System) context layers.\n" .
-            "The `.aitos/` directory holds structured project requirements, blueprints, planning data, and optimized markdown summaries for AI-assisted development tools.\n\n" .
-            "Please review `START_HERE.md` to trigger AI workspace alignments.\n";
+        if (is_array($text)) {
+            return $text;
+        }
+
+        $lines    = array_map('trim', explode("\n", (string) $text));
+        $filtered = array_filter($lines, fn($line) => $line !== '');
+
+        return array_values(array_map(fn($line) => ltrim($line, "\u{2022}*-\t "), $filtered));
     }
 
-    private function buildStartHere($state)
+    // =========================================================================
+    // PROJECT BRIEF EXPORT
+    // =========================================================================
+
+    /**
+     * Generate and download the AITOS Project Brief as a ZIP bundle containing:
+     *   - project_brief.html  (rich, interactive HTML with Mermaid diagrams)
+     *   - project_brief.pdf   (clean, normal PDF for printing / mentor review)
+     *   - diagrams/er_diagram.mmd  (Mermaid source for offline rendering)
+     */
+    public function downloadBrief(Request $request)
     {
-        return "# AITOS Workspace Alignment\n\n" .
-            "> **AITOS Philosophy:** Humans Decide. AI Builds. AITOS Remembers.\n\n" .
-            "Welcome, AI Developer Agent. You have been opened in this workspace. Before writing code or proposing edits, synchronize your parameters with this repository context.\n\n" .
-            "### Synchronization Instructions\n" .
-            "1. Load `PROJECT_SUMMARY.md` to understand the product vision.\n" .
-            "2. Read files inside `.aitos/context/` directory to align core technology scopes:\n" .
-            "   - `CURRENT_CONTEXT.md` for your active task list and feature assignments.\n" .
-            "   - `BACKEND_CONTEXT.md` for entities, models, and databases.\n" .
-            "   - `FRONTEND_CONTEXT.md` for CSS, bootstrap grids, and layouts.\n" .
-            "3. Consult `.aitos/data/rules.json` to verify business logic constraints.\n\n" .
-            "Do not create files or change folder routing outside approved specifications.\n";
+        $stateJson = $request->input('project_state');
+        if (!$stateJson) {
+            return redirect()->back()->with('error', 'No compilation state found.');
+        }
+
+        $state = json_decode($stateJson, true);
+        if (!$state || !isset($state['projectName'])) {
+            return redirect()->back()->with('error', 'Invalid compilation state.');
+        }
+
+        // Run the full ArchitectEngine pipeline to get compiled state
+        $orchestrator   = new ArchitectEngine();
+        $pipelineResult = $orchestrator->execute($state);
+        $compiledState  = $pipelineResult['state'];
+        $report         = $pipelineResult['report'];
+
+        // Build the Mermaid ER diagram string from schema + knowledge graph
+        $mermaidDiagram = $this->buildMermaidDiagram($compiledState);
+
+        // Flatten helper: ensure a value is always a clean string array
+        $toArray = fn($val) => is_array($val)
+            ? array_values(array_filter(array_map('trim', $val)))
+            : array_values(array_filter(array_map('trim', explode("\n", (string) $val))));
+
+        $projectModel = $compiledState['projectModel'] ?? [];
+        $requirements = $compiledState['requirements'] ?? [];
+
+        // Normalise all list fields into proper arrays for the Blade views
+        $viewData = [
+            'projectName'        => trim($compiledState['projectName'] ?? 'Untitled Project'),
+            'projectDescription' => trim($compiledState['projectDescription'] ?? ''),
+            'projectGoal'        => trim($compiledState['projectGoal'] ?? ''),
+            'generatedAt'        => date('F j, Y \a\t g:i A'),
+            'techStack'          => $compiledState['techStack'] ?? [],
+            'requirements'       => $requirements,
+            'projectModel'       => [
+                'project_name'                => $projectModel['project_name']                ?? $compiledState['projectName'] ?? '',
+                'description'                 => $projectModel['description']                 ?? '',
+                'goal'                        => $projectModel['goal']                        ?? '',
+                'entities'                    => $projectModel['entities']                    ?? [],
+                'relationships'               => $projectModel['relationships']               ?? [],
+                'modules'                     => $toArray($projectModel['modules']            ?? []),
+                'roles'                       => $toArray($projectModel['roles']              ?? []),
+                'business_rules'              => $toArray($projectModel['business_rules']     ?? $requirements['businessRules'] ?? []),
+                'functional_requirements'     => $toArray($projectModel['functional_requirements']     ?? $requirements['functionalRequirements']    ?? []),
+                'non_functional_requirements' => $toArray($projectModel['non_functional_requirements'] ?? $requirements['nonFunctionalRequirements'] ?? []),
+                'assumptions'                 => $toArray($projectModel['assumptions']        ?? $requirements['assumptions']  ?? []),
+                'risks'                       => $toArray($projectModel['risks']              ?? $requirements['risks']        ?? []),
+                'user_stories'                => $toArray($projectModel['user_stories']       ?? $requirements['userStories']  ?? []),
+                'phases'                      => $toArray($projectModel['phases']             ?? $requirements['implementationPhases'] ?? []),
+                'ai_notes'                    => $toArray($projectModel['ai_notes']           ?? $requirements['aiNotes']      ?? []),
+                'tech_stack'                  => $projectModel['tech_stack']                  ?? [],
+            ],
+            'blueprints'     => $compiledState['blueprints']    ?? [],
+            'databaseSchema' => $compiledState['databaseSchema'] ?? ['tables' => [], 'relationships' => [], 'migration_order' => []],
+            'apiDesign'      => $compiledState['apiDesign']     ?? ['resources' => [], 'error_responses' => []],
+            'projectPlan'    => $compiledState['projectPlan']   ?? [],
+            'knowledgeGraph' => $compiledState['knowledgeGraph'] ?? ['relations' => []],
+            'pipelineReport' => $report,
+            'mermaidDiagram' => $mermaidDiagram,
+        ];
+
+        $safeProjectName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $viewData['projectName'] ?: 'AITOS_Project');
+
+        // 1) Render the rich HTML brief
+        $htmlContent = view('reports.project_brief', $viewData)->render();
+
+        // 2) Render the clean PDF brief using DomPDF
+        $pdfHtml = view('reports.project_brief_pdf', $viewData)->render();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($pdfHtml);
+        $pdf->setPaper('a4', 'portrait');
+        $pdfContent = $pdf->output();
+
+        // 3) Build ZIP bundle
+        $zipFileName = tempnam(sys_get_temp_dir(), 'aitos_brief_') . '.zip';
+
+        try {
+            $zip = new ZipArchive();
+            if ($zip->open($zipFileName, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                throw new \RuntimeException('Failed to create ZIP archive for brief.');
+            }
+
+            // Add the rich HTML file
+            $zip->addFromString($safeProjectName . '_Project_Brief.html', $htmlContent);
+
+            // Add the clean PDF file
+            $zip->addFromString($safeProjectName . '_Project_Brief.pdf', $pdfContent);
+
+            // Add Mermaid diagram source file (if available)
+            if (!empty($mermaidDiagram)) {
+                $zip->addFromString('diagrams/er_diagram.mmd', $mermaidDiagram);
+
+                // Also add a README for the diagrams folder
+                $zip->addFromString('diagrams/README.txt',
+                    "ER Diagram (Mermaid Source)\n"
+                    . "===========================\n\n"
+                    . "The file 'er_diagram.mmd' contains a Mermaid diagram definition.\n\n"
+                    . "To render it:\n"
+                    . "  1. Open https://mermaid.live and paste the contents\n"
+                    . "  2. Or install the Mermaid CLI: npm install -g @mermaid-js/mermaid-cli\n"
+                    . "     Then run: mmdc -i er_diagram.mmd -o er_diagram.png\n\n"
+                    . "The HTML brief file also renders this diagram automatically\n"
+                    . "when opened in a browser with internet access.\n"
+                );
+            }
+
+            $zip->close();
+
+        } catch (\Throwable $e) {
+            if (file_exists($zipFileName)) {
+                @unlink($zipFileName);
+            }
+            return response()->json(['error' => 'Brief export failed: ' . $e->getMessage()], 500);
+        }
+
+        return response()->download(
+            $zipFileName,
+            $safeProjectName . '_Project_Brief.zip'
+        )->deleteFileAfterSend(true);
     }
 
-    private function buildSummary($state)
+    /**
+     * Build a Mermaid erDiagram definition string from the compiled database schema
+     * and knowledge graph relations. Limits to 12 tables for readability.
+     */
+    private function buildMermaidDiagram(array $compiledState): string
     {
-        return "# Project Summary: " . $state['projectName'] . "\n\n" .
-            "## Problem Statement\n" .
-            "```text\n" .
-            $state['problemStatement'] . "\n" .
-            "```\n\n" .
-            "## System Requirements Overview\n" .
-            ($state['requirements']['requirements'] ?? '') . "\n\n" .
-            "## Risks & Assumptions\n" .
-            "### Assumptions\n" .
-            ($state['requirements']['assumptions'] ?? '') . "\n\n" .
-            "### Risks & Mitigations\n" .
-            ($state['requirements']['risks'] ?? '') . "\n";
-    }
+        $tables    = $compiledState['databaseSchema']['tables']    ?? [];
+        $relations = $compiledState['knowledgeGraph']['relations'] ?? [];
 
-    private function buildCurrentContext($state)
-    {
-        $tasksStr = '';
-        if (isset($state['tasks'])) {
-            foreach ($state['tasks'] as $t) {
-                $tasksStr .= "- [ ] **" . strtoupper($t['column']) . "**: " . $t['text'] . "\n";
+        if (empty($tables)) {
+            return '';
+        }
+
+        // Cap at 12 tables to keep the diagram readable
+        $displayTables = array_slice($tables, 0, 12);
+        $tableNames    = array_map(fn($t) => strtoupper($t['name']), $displayTables);
+
+        $lines = ['erDiagram'];
+
+        foreach ($displayTables as $table) {
+            $entityName = strtoupper($table['name']);
+            $lines[]    = "    {$entityName} {";
+
+            // Only show PK, FK, UNIQUE, and common named columns to keep blocks compact
+            $keyColumns = array_filter($table['columns'], function ($col) {
+                return ($col['primary_key'] ?? false)
+                    || isset($col['foreign_key'])
+                    || ($col['unique'] ?? false)
+                    || in_array($col['name'], ['name', 'title', 'email', 'status', 'type', 'slug']);
+            });
+
+            // If nothing matched, just show the first 3 columns
+            if (empty($keyColumns)) {
+                $keyColumns = array_slice($table['columns'], 0, 3);
+            }
+
+            foreach ($keyColumns as $col) {
+                // Extract first word of type and strip parenthetical size specs
+                $rawType  = strtolower(explode(' ', $col['type'])[0]);
+                $type     = preg_replace('/\(.*\)/', '', $rawType) ?: 'string';
+                $colName  = $col['name'];
+                $suffix   = '';
+                if ($col['primary_key']   ?? false) $suffix .= ' PK';
+                if (isset($col['foreign_key']))      $suffix .= ' FK';
+                if (($col['unique'] ?? false) && !($col['primary_key'] ?? false)) $suffix .= ' UK';
+
+                $lines[] = "        {$type} {$colName}{$suffix}";
+            }
+
+            $lines[] = '    }';
+        }
+
+        // Add relationship lines — map source/target to actual pluralised table names
+        $addedRelations = [];
+        foreach ($relations as $rel) {
+            $sourceTable = strtoupper(Str::plural($rel['source'] ?? ''));
+            $targetTable = strtoupper(Str::plural($rel['target'] ?? ''));
+
+            $key = "{$sourceTable}|{$targetTable}";
+
+            if (
+                !isset($addedRelations[$key])
+                && in_array($sourceTable, $tableNames, true)
+                && in_array($targetTable, $tableNames, true)
+            ) {
+                $label           = str_replace('_', ' ', $rel['label'] ?? 'has');
+                $lines[]         = "    {$sourceTable} ||--o{ {$targetTable} : \"{$label}\"";
+                $addedRelations[$key] = true;
             }
         }
 
-        $decisionsStr = '';
-        if (isset($state['decisions'])) {
-            foreach ($state['decisions'] as $d) {
-                $decisionsStr .= "- **" . $d['date'] . "** *" . $d['title'] . "*: " . $d['desc'] . "\n";
-            }
-        }
-
-        return "# Current Alignment Context\n\n" .
-            "This file details the assigned development boundaries.\n\n" .
-            "## Active Sprint Tasks\n" .
-            $tasksStr . "\n" .
-            "## Decision History Summary\n" .
-            $decisionsStr;
-    }
-
-    private function buildBackendContext($state)
-    {
-        return "# Backend Context Layer\n\n" .
-            "Contains model logic, API routes, and schema structures.\n\n" .
-            "## Technology Stack\n" .
-            "- Core: " . ($state['techStack']['framework'] ?? '') . "\n" .
-            "- Database: " . ($state['techStack']['database'] ?? '') . "\n\n" .
-            "## Entities Map\n" .
-            ($state['requirements']['entities'] ?? '') . "\n\n" .
-            "## Modules Map\n" .
-            ($state['requirements']['modules'] ?? '') . "\n\n" .
-            "## Database Specifications\n" .
-            ($state['blueprints']['database'] ?? '') . "\n";
-    }
-
-    private function buildFrontendContext($state)
-    {
-        return "# Frontend Context Layer\n\n" .
-            "Contains layout structures, CSS frameworks, templates, and styling.\n\n" .
-            "## Design Frameworks\n" .
-            "- Layouts: " . ($state['techStack']['frontend'] ?? '') . "\n" .
-            "- Icons: Bootstrap Icons (CDN)\n\n" .
-            "## User Interface Specifications\n" .
-            ($state['blueprints']['ui'] ?? '') . "\n";
-    }
-
-    private function buildDatabaseContext($state)
-    {
-        return "# Database Schema Context\n\n" .
-            "## Design Schema\n" .
-            ($state['blueprints']['database'] ?? '') . "\n";
-    }
-
-    private function buildGenericContext($state)
-    {
-        return "# Generic Development Guidelines\n\n" .
-            "1. **Strict Coding Standards:** Maintain standard formatting rules matching the primary framework convention.\n" .
-            "2. **Commit Policy:** Commit regularly. Each commit message must start with a context marker matching the active module (e.g. `feat(auth)`).\n" .
-            "3. **No Overwrites:** Do not rewrite files or delete sections unless specified. Write modular additions.\n";
-    }
-
-    private function splitLines($text)
-    {
-        $lines = array_map('trim', explode("\n", $text));
-        $filtered = array_filter($lines, function($line) {
-            return $line !== '';
-        });
-        return array_values(array_map(function($line) {
-            return ltrim($line, "•*-\t ");
-        }, $filtered));
+        return implode("\n", $lines);
     }
 }

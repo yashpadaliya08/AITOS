@@ -1,0 +1,9 @@
+{
+    "name": "Next.js Framework Plugin",
+    "version": "1.0.0",
+    "author": "AITOS Platform",
+    "description": "Integrates Next.js framework code generation maps into AITOS.",
+    "required_core_version": "1.5.0",
+    "entrypoint": "NextPlugin",
+    "namespace": "Plugins\\Next"
+}

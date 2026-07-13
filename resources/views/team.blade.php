@@ -234,7 +234,7 @@
             // Remove placeholders from count
             const cardCount = col.querySelectorAll(".task-card").length;
             
-            // In V1, we simulate that some percentage of tasks are done, say 50% or based on card indices to represent live work!
+            // In V2, we simulate that some percentage of tasks are done, say 50% or based on card indices to represent live work!
             // Let's assume the first 1-2 tasks in any column are checked off, or just provide a mockup ratio.
             const progress = cardCount > 0 ? 50 : 0; // standard mock percentage
             

@@ -8,7 +8,7 @@
     
     <!-- Meta tags for SEO -->
     <meta name="description" content="AITOS - AI-first project planning and context management platform for hackathons and AI-assisted software teams. Keep your AI developers in sync.">
-    <meta name="author" content="AITOS V1">
+    <meta name="author" content="AITOS V2">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
@@ -35,17 +35,17 @@
             <!-- Main Content Grid -->
             <main class="flex-grow-1 position-relative">
                 <!-- Lock Screen Overlay (handled by JS state check) -->
-                <div id="phaseLockOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background-color: rgba(248, 249, 250, 0.95); z-index: 1000; min-height: 400px;">
-                    <div class="text-center p-5 rounded-4 bg-white border border-light shadow-sm" style="max-width: 500px;">
+                <div id="phaseLockOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1000; min-height: 400px; transition: var(--transition);">
+                    <div class="text-center p-5 rounded-4 bg-white border border-light-subtle shadow-lg" style="max-width: 500px; animation: modalZoom 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
                         <div class="mb-4">
-                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light border border-secondary border-opacity-10 text-primary" style="width: 72px; height: 72px; font-size: 2.25rem;">
+                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger-subtle text-danger" style="width: 76px; height: 76px; font-size: 2.25rem;">
                                 <i class="bi bi-lock-fill"></i>
                             </span>
                         </div>
                         <h4 class="fw-bold mb-2">Phase is Locked</h4>
                         <p class="text-muted mb-4" id="phaseLockMessage">Please complete the required previous workflow stages before accessing this component.</p>
-                        <a href="#" id="phaseLockActionBtn" class="btn btn-primary px-4 py-2 fw-medium">
-                            Go to Current Stage
+                        <a href="#" id="phaseLockActionBtn" class="btn btn-primary px-4 py-2.5 fw-semibold shadow-sm">
+                            <i class="bi bi-arrow-right-circle me-1"></i> Go to Current Stage
                         </a>
                     </div>
                 </div>
@@ -79,7 +79,7 @@
                 gemini: "",
                 openai: "",
                 anthropic: "",
-                defaultProvider: "gemini"
+                defaultProvider: "openai"
             },
             analysisHash: "",
             
@@ -108,7 +108,8 @@
 
             // Requirements cards
             requirements: {
-                entities: "• Project: Main container for project configurations\n• Blueprint: Modular documents detailing technical layouts\n• TeamMember: Entity representing developer profile and active agent assignment\n• Task: Executable workload units assigned to members\n• CompilationHistory: Logs of compiler activity",
+                entities: "Project: id, name, goal, config\nBlueprint: id, project_id, version, content\nTeamMember: id, name, github_username, preferred_ai, role\nTask: id, description, status",
+                relationships: "Blueprint belongs_to Project\nTeamMember belongs_to Project\nTask belongs_to TeamMember",
                 modules: "• Wizard Manager: Handles multi-step form collection\n• Requirements Synthesizer: Suggests editable modules from prompt\n• Versioned Blueprint Engine: Maintains immutable structural blueprint logs\n• Context Compiler: Compiles details to markdown\n• Export Package Packager: Packages zip files",
                 roles: "• Product Owner / Decider (Human Developer)\n• Build Partner (AI Coding Assistants: Cursor, Claude, Antigravity, etc.)\n• AITOS Supervisor: Context maintainer and compiler",
                 businessRules: "• Humans decide and approve, AI suggests and builds\n• Approved blueprints are fully immutable; edits spawn a new version\n• Every blueprint revision automatically generates a Decision history record\n• Compilation outputs cannot be modified manually",
@@ -121,6 +122,7 @@
             blueprints: {
                 version: "1.0.0",
                 status: "Pending",
+                aiGenerated: false,
                 business: "### Business Domain Map\n1. Target Audience: AI-assisted development teams.\n2. Key Value Proposition: Eliminate context drift, standardize entity schemas, and synchronize multiple autonomous coding agents.\n3. Workflow Rules: Design phase precedes implementation. Decider approves change requests before coding.",
                 database: "### Database Schema Outline\n- **projects**: id (uuid), name, goal, config (json)\n- **blueprints**: id (uuid), project_id, version, type, content (text), approved_by, approved_at\n- **team_members**: id (uuid), project_id, name, github_username, preferred_ai, role\n- **tasks**: id (uuid), member_id, description, status (pending/completed)",
                 technical: "### Technical Blueprint & Architecture\n- Framework: Laravel 11.x (PHP 8.2+)\n- Frontend: Blade Template Engine + Bootstrap 5.3 CSS\n- State Persistence: File-system JSON repository (.aitos/data)\n- Build Pipeline: Webhook-free file watchers checking current context",
@@ -139,7 +141,7 @@
 
             // Decisions History
             decisions: [
-                { date: "2026-07-10 14:02", title: "Project Initialized", desc: "Bootstrapped project layout matching V1 specification." }
+                { date: "2026-07-10 14:02", title: "Project Initialized", desc: "Bootstrapped project layout matching V2 specification." }
             ]
         };
 

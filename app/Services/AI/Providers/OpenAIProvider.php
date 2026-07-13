@@ -45,6 +45,11 @@ class OpenAIProvider implements AIProvider
             }
         }
 
+        $maxTokens = 3000;
+        if (str_contains($model, ':free')) {
+            $maxTokens = 8000;
+        }
+
         $payload = [
             'model' => $model,
             'messages' => [
@@ -52,8 +57,12 @@ class OpenAIProvider implements AIProvider
                 ['role' => 'user', 'content' => $userMessage]
             ],
             'temperature' => $temperature,
-            'response_format' => ['type' => 'json_object']
+            'max_tokens' => $maxTokens
         ];
+
+        if (!str_starts_with($apiKey, 'sk-or-') || str_contains($model, 'openai/') || str_contains($model, 'gpt-')) {
+            $payload['response_format'] = ['type' => 'json_object'];
+        }
 
         $response = Http::withHeaders($headers)->timeout($timeout)->post($url, $payload);
 

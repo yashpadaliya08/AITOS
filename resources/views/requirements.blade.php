@@ -76,6 +76,28 @@
         </div>
     </div>
 
+    <!-- Relationships Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card aitos-card h-100 border-light-subtle">
+            <div class="aitos-card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-dark"><i class="bi bi-diagram-3 text-primary me-2"></i> Entity Relationships</span>
+                <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1" onclick="toggleEditCard('relationships')">
+                    <span id="btn-text-relationships">Edit</span>
+                </button>
+            </div>
+            <div class="aitos-card-body">
+                <div id="view-relationships" class="whitespace-pre-wrap text-secondary" style="font-size: 0.9rem;"></div>
+                <div id="edit-container-relationships" class="d-none">
+                    <textarea id="edit-input-relationships" class="form-control font-monospace border-light-subtle" rows="8" style="font-size: 0.85rem;"></textarea>
+                    <div class="d-flex gap-2 mt-3 justify-content-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1" onclick="cancelEditCard('relationships')">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-primary px-3 py-1" onclick="saveEditCard('relationships')">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modules Card -->
     <div class="col-md-6 col-lg-4">
         <div class="card aitos-card h-100 border-light-subtle">
@@ -418,8 +440,34 @@
             if (data.success && data.analysis) {
                 // Map the structured JSON result to requirements state
                 const res = data.analysis;
+                
+                let entitiesStr = "";
+                if (Array.isArray(res.entities)) {
+                    entitiesStr = res.entities.map(e => {
+                        if (typeof e === 'object' && e !== null) {
+                            return `${e.name || ''}: ${(e.attributes || []).join(', ')}`;
+                        }
+                        return String(e);
+                    }).join('\n');
+                } else {
+                    entitiesStr = res.entities || "";
+                }
+
+                let relationshipsStr = "";
+                if (Array.isArray(res.relationships)) {
+                    relationshipsStr = res.relationships.map(r => {
+                        if (typeof r === 'object' && r !== null) {
+                            return `${r.from || ''} ${r.type || 'belongs_to'} ${r.to || ''}`;
+                        }
+                        return String(r);
+                    }).join('\n');
+                } else {
+                    relationshipsStr = res.relationships || "";
+                }
+
                 state.requirements = {
-                    entities: Array.isArray(res.entities) ? res.entities.join('\n') : (res.entities || ''),
+                    entities: entitiesStr,
+                    relationships: relationshipsStr,
                     modules: Array.isArray(res.modules) ? res.modules.join('\n') : (res.modules || ''),
                     roles: Array.isArray(res.roles) ? res.roles.join('\n') : (res.roles || ''),
                     businessRules: Array.isArray(res.businessRules) ? res.businessRules.join('\n') : (res.businessRules || ''),
@@ -496,7 +544,7 @@
         const state = getProjectState();
         
         const fields = [
-            'entities', 'modules', 'roles', 'businessRules', 'requirements', 
+            'entities', 'relationships', 'modules', 'roles', 'businessRules', 'requirements', 
             'nonFunctionalRequirements', 'assumptions', 'risks', 'userStories', 
             'suggestedFolderStructure', 'implementationPhases', 'aiNotes'
         ];

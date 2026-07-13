@@ -161,9 +161,9 @@
 
         // Add a compile history item
         state.decisions = [
-            { date: "2026-07-10 14:02", title: "Project Initialized", desc: "Bootstrapped project layout matching V1 specification." },
+            { date: "2026-07-10 14:02", title: "Project Initialized", desc: "Bootstrapped project layout matching V2 specification." },
             { date: "2026-07-10 15:40", title: "Requirements Approved", desc: "Locked business modules, entity definitions, and developer boundaries." },
-            { date: "2026-07-10 16:15", title: "Blueprints Approved (V1)", desc: "Locked database schema, technical blade stack, and UI style systems." },
+            { date: "2026-07-10 16:15", title: "Blueprints Approved (V2)", desc: "Locked database schema, technical blade stack, and UI style systems." },
             { date: "2026-07-10 17:30", title: "Team Planning Saved", desc: "Divided technical scopes amongst Alex, Sarah, and Dave." },
             { date: "2026-07-10 19:30", title: "Compiled Repository package", desc: "Compiled Markdown contexts and structured project data." }
         ];
