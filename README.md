@@ -83,8 +83,8 @@ ANTHROPIC_API_KEY=your_anthropic_key_here
 ```
 
 > [!TIP]  
-> If you are using **OpenRouter**, paste your `sk-or-v1-...` key into the `OPENAI_API_KEY` slot. The system automatically detects OpenRouter keys and adjusts endpoints accordingly.
-
+> If you are using **OpenRouter**, paste your `sk-or-v1-...` key into the `OPENAI_API_KEY` slot. The system automatically detects OpenRouter keys and adjusts endpoints accordingly.****
+**> You can get key from openrouter for free and then tell the AI to put with NVIDIA Nemotron 3 Ultra(free) version make sure you specifies the model other wise it choose the paid one ******
 ---
 
 ### Option B: Via the Settings UI Dashboard (No file changes needed)
@@ -106,3 +106,6 @@ php artisan serve
 
 Open your browser and navigate to:
 👉 **[http://127.0.0.1:8000](http://127.0.0.1:8000)**
+
+
+if anythings not working mail mm email- yashpadaliya2@gmail.com
