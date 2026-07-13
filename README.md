@@ -1,59 +1,108 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🤖 AITOS — AI Technical OS & Context Compiler
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+AITOS is an AI-powered software engineering architect platform designed to convert a high-level product idea into a complete software blueprint, virtual workspace structure, and exportable context packages.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🛠️ Features
+* **Project Wizard:** Define your project metadata, target objectives, and choose frameworks, databases, and frontend stacks.
+* **Requirements Analyzer:** AI compiles user roles, modules, functional requirements, user stories, risks, and assumptions.
+* **Architecture Blueprinter:** Instantly drafts database schemas (migration structure), API endpoints, and UI blueprints.
+* **Virtual Development Workspace:** Generates markdown context logs and prompts customized for AI code editors like Cursor, Claude, or Copilot.
+* **Export Center:** Download an offline repository package (`.zip`) or generate a printable **Project Brief** (ZIP including interactive HTML, clean PDF, and Mermaid ER diagram sources).
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 📋 Requirements
+Before running the application, make sure you have installed:
+* **PHP 8.2 or higher**
+* **Composer**
+* **Node.js & NPM**
+* **SQLite** (or MySQL/PostgreSQL)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## 🚀 Getting Started & Local Installation
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Follow these steps to run AITOS locally on your machine:
 
-## Laravel Sponsors
+### 1. Clone the repository
+```bash
+git clone https://github.com/yashpadaliya08/AITOS.git
+cd AITOS
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2. Install PHP & Node dependencies
+```bash
+composer install
+npm install
+```
 
-### Premium Partners
+### 3. Setup Configuration & Database
+Copy the environment example file:
+```bash
+cp .env.example .env
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Generate the application encryption key:
+```bash
+php artisan key:generate
+```
 
-## Contributing
+Initialize your SQLite database (default configuration):
+```bash
+# Create empty database file (Windows PowerShell)
+New-Item -ItemType File -Path database/database.sqlite -Force
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# Run migrations to build tables
+php artisan migrate
+```
 
-## Code of Conduct
+### 4. Build frontend assets
+```bash
+npm run build
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🔑 Configuring Your AI API Keys
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+AITOS supports two convenient ways to configure your API keys (OpenAI, Gemini, Anthropic, or OpenRouter):
 
-## License
+### Option A: Via the `.env` File (Recommended for Local Dev)
+Open the `.env` file at the root of your project and paste your keys directly:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```env
+# Default provider settings ("gemini", "openai", "anthropic")
+AITOS_DEFAULT_PROVIDER=openai
+
+# Your API Keys (Fill in what you plan to use)
+GEMINI_API_KEY=your_gemini_key_here
+OPENAI_API_KEY=your_openai_or_openrouter_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
+```
+
+> [!TIP]  
+> If you are using **OpenRouter**, paste your `sk-or-v1-...` key into the `OPENAI_API_KEY` slot. The system automatically detects OpenRouter keys and adjusts endpoints accordingly.
+
+---
+
+### Option B: Via the Settings UI Dashboard (No file changes needed)
+If you don't want to edit configuration files:
+1. Start the application.
+2. Navigate to the **System Settings** page from the sidebar menu.
+3. Paste your keys under **AI Engine Configuration**.
+4. Click **Save Preferences**.
+
+*Note: Keys entered in the UI are securely saved strictly in your local browser storage (`localStorage`) and are only sent to the local server during active compilation requests.*
+
+---
+
+## 💻 Running the App
+Start the local Laravel development server:
+```bash
+php artisan serve
+```
+
+Open your browser and navigate to:
+👉 **[http://127.0.0.1:8000](http://127.0.0.1:8000)**
