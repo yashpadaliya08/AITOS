@@ -24,5 +24,9 @@ Route::get('/export', fn() => view('export'));
 Route::get('/dashboard', fn() => view('dashboard'));
 Route::get('/settings', fn() => view('settings'));
 
-Route::post('/export/download', [ExportController::class, 'download']);
-Route::post('/export/brief',    [ExportController::class, 'downloadBrief']);
+Route::post('/export/download',         [ExportController::class, 'download']);
+Route::post('/export/brief',            [ExportController::class, 'downloadBrief']);
+Route::post('/export/preview-prompts',  [ExportController::class, 'previewPrompts']);
+Route::post('/import',                  [ExportController::class, 'import']);
+
+

@@ -1,11 +1,9 @@
-@import 'tailwindcss';
-
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-}
+/*
+ * AITOS Resources CSS
+ *
+ * This file is the Vite entrypoint but is NOT actively loaded by Blade templates.
+ * The active stylesheet is public/css/app.css (loaded via asset() helper).
+ *
+ * If you migrate to Vite asset bundling in the future, move your styles here
+ * and add the @vite directive to layouts/app.blade.php.
+ */

@@ -148,43 +148,41 @@
                 </div>
             </div>
 
-            <!-- Cursor Context Card -->
-            <div class="col-md-6">
-                <div class="card h-100 border-light-subtle shadow-sm text-center p-3 opacity-75">
-                    <div class="card-body d-flex flex-column justify-content-between align-items-center py-4">
-                        <div class="mb-3">
-                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-secondary border" style="width: 60px; height: 60px; font-size: 1.75rem;">
-                                <i class="bi bi-cursor-fill"></i>
-                            </span>
+            <!-- Prompt Customizer Card -->
+            <div class="col-12">
+                <div class="card border-warning border-2 shadow-sm p-3" id="promptCustomizerCard">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning bg-opacity-10 text-warning" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                                    <i class="bi bi-stars"></i>
+                                </span>
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-0">AI Prompt Customizer</h5>
+                                    <p class="text-muted small mb-0">Select your target AI editor, preview and customize prompt packs before downloading.</p>
+                                </div>
+                            </div>
+                            <span class="badge bg-warning text-dark px-3 py-2"><i class="bi bi-lightning-charge-fill me-1"></i>New</span>
                         </div>
-                        <div>
-                            <span class="badge bg-secondary mb-2">Coming Soon</span>
-                            <h5 class="fw-bold text-muted mb-2">Cursor Config</h5>
-                            <p class="text-muted small mb-0 px-2">Auto-imports <code>.cursorrules</code> preferences directly mapped into Cursor project directories.</p>
-                        </div>
-                        <div class="mt-4 w-100">
-                            <button type="button" class="btn btn-outline-secondary w-100 py-2.5 disabled">Unavailable</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Gemini Rules Card -->
-            <div class="col-md-6">
-                <div class="card h-100 border-light-subtle shadow-sm text-center p-3 opacity-75">
-                    <div class="card-body d-flex flex-column justify-content-between align-items-center py-4">
-                        <div class="mb-3">
-                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-secondary border" style="width: 60px; height: 60px; font-size: 1.75rem;">
-                                <i class="bi bi-gem"></i>
-                            </span>
-                        </div>
-                        <div>
-                            <span class="badge bg-secondary mb-2">Coming Soon</span>
-                            <h5 class="fw-bold text-muted mb-2">Gemini System Prompt</h5>
-                            <p class="text-muted small mb-0 px-2">JSON configuration context mappings optimized for Gemini Code Assist engines.</p>
-                        </div>
-                        <div class="mt-4 w-100">
-                            <button type="button" class="btn btn-outline-secondary w-100 py-2.5 disabled">Unavailable</button>
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-5">
+                                <label for="promptModelSelect" class="form-label fw-semibold small text-dark">Target AI Model</label>
+                                <select class="form-select" id="promptModelSelect">
+                                    <option value="cursor" selected>🖱️ Cursor AI — .cursorrules format</option>
+                                    <option value="claude">🤖 Claude (Anthropic) — XML system prompts</option>
+                                    <option value="gemini">💎 Gemini (Google) — Structured instructions</option>
+                                    <option value="copilot">🐙 GitHub Copilot — Inline comments</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-outline-warning w-100 fw-bold py-2" id="previewPromptsBtn" onclick="previewPrompts()">
+                                    <i class="bi bi-eye-fill me-1"></i> Preview & Customize Prompts
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small text-end" id="promptModelDesc">Optimized for Cursor .cursorrules and Composer chat.</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -208,6 +206,37 @@
     @csrf
     <input type="hidden" name="project_state" id="briefFormPayload">
 </form>
+<!-- Prompt Preview Modal -->
+<div class="modal fade" id="promptPreviewModal" tabindex="-1" aria-labelledby="promptPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-warning bg-opacity-10 border-warning">
+                <h5 class="modal-title fw-bold" id="promptPreviewModalLabel">
+                    <i class="bi bi-stars me-2"></i>Prompt Pack Preview
+                    <span class="badge bg-dark ms-2 fw-normal" id="modalModelBadge">Cursor AI</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" id="promptPreviewBody">
+                <div class="d-flex align-items-center justify-content-center py-5">
+                    <div class="spinner-border text-warning" role="status"></div>
+                    <span class="ms-3 text-muted">Generating prompts...</span>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i> Edit any prompt content above. Changes will be bundled into your ZIP download.
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning fw-bold" onclick="applyCustomPrompts()">
+                        <i class="bi bi-check-lg me-1"></i> Apply to ZIP Package
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -310,6 +339,126 @@
             desc: "Exported ZIP bundle containing HTML brief, printable PDF, and ER diagram files for mentor review."
         });
         saveProjectState(state);
+    }
+
+    // ── Prompt Customizer Functions ──
+
+    // Update description text when model selection changes
+    document.getElementById('promptModelSelect').addEventListener('change', function() {
+        const descriptions = {
+            cursor: 'Optimized for Cursor .cursorrules and Composer chat.',
+            claude: 'XML-tagged system prompts for Claude precision.',
+            gemini: 'Structured instructions for Gemini large context windows.',
+            copilot: 'Inline-comment style for GitHub Copilot Workspace.'
+        };
+        document.getElementById('promptModelDesc').textContent = descriptions[this.value] || '';
+    });
+
+    // Cached prompt data for customization
+    let cachedPrompts = {};
+
+    async function previewPrompts() {
+        const state = getProjectState();
+        const modelTarget = document.getElementById('promptModelSelect').value;
+        const modal = new bootstrap.Modal(document.getElementById('promptPreviewModal'));
+        const body = document.getElementById('promptPreviewBody');
+
+        // Show loading state
+        body.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="spinner-border text-warning" role="status"></div>
+                <span class="ms-3 text-muted">Generating prompts for ${modelTarget}...</span>
+            </div>`;
+        modal.show();
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            const response = await fetch('/export/preview-prompts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    project_state: JSON.stringify(state),
+                    model_target: modelTarget
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                body.innerHTML = `<div class="alert alert-danger m-4">${data.message || 'Failed to generate prompts.'}</div>`;
+                return;
+            }
+
+            document.getElementById('modalModelBadge').textContent = data.model_label;
+            cachedPrompts = data.prompts;
+
+            // Build accordion UI with editable textareas
+            let html = '<div class="accordion" id="promptAccordion">';
+            let index = 0;
+            for (const [filename, content] of Object.entries(data.prompts)) {
+                const isFirst = index === 0;
+                const cleanName = filename.replace('.md', '').replace(/_/g, ' ');
+                html += `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button ${isFirst ? '' : 'collapsed'} fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#promptCollapse${index}">
+                                <i class="bi bi-file-earmark-code me-2 text-warning"></i>
+                                <span class="font-monospace small">${filename}</span>
+                                <span class="ms-2 text-muted small fw-normal">— ${cleanName}</span>
+                            </button>
+                        </h2>
+                        <div id="promptCollapse${index}" class="accordion-collapse collapse ${isFirst ? 'show' : ''}"
+                             data-bs-parent="#promptAccordion">
+                            <div class="accordion-body p-2">
+                                <textarea class="form-control font-monospace"
+                                          id="promptEdit_${filename}"
+                                          rows="14"
+                                          style="font-size: 0.8rem; background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; resize: vertical;"
+                                >${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                            </div>
+                        </div>
+                    </div>`;
+                index++;
+            }
+            html += '</div>';
+            body.innerHTML = html;
+
+        } catch (err) {
+            body.innerHTML = `<div class="alert alert-danger m-4">Network error: ${err.message}</div>`;
+        }
+    }
+
+    function applyCustomPrompts() {
+        // Read edited values from textareas and store in project state
+        const state = getProjectState();
+        const customized = {};
+
+        for (const filename of Object.keys(cachedPrompts)) {
+            const textarea = document.getElementById(`promptEdit_${filename}`);
+            if (textarea) {
+                customized[filename] = textarea.value;
+            } else {
+                customized[filename] = cachedPrompts[filename];
+            }
+        }
+
+        // Store customized prompts and model target in state
+        state.promptPacks = { files: customized };
+        state.promptModelTarget = document.getElementById('promptModelSelect').value;
+        saveProjectState(state);
+
+        // Close modal
+        bootstrap.Modal.getInstance(document.getElementById('promptPreviewModal')).hide();
+
+        // Show success toast if available
+        if (typeof showToast === 'function') {
+            showToast('Prompt packs customized and attached to ZIP package.', 'success');
+        }
     }
 </script>
 @endsection

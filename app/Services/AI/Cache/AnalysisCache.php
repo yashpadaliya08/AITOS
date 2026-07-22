@@ -8,9 +8,9 @@ class AnalysisCache
 {
     /**
      * Default TTL for cached analysis results (seconds).
-     * 1 hour — suitable for AI analysis responses that are expensive to regenerate.
+     * Reads from config/ai.php; falls back to 1 hour.
      */
-    private const TTL = 3600;
+    private const DEFAULT_TTL = 3600;
 
     /**
      * Cache key prefix to avoid collisions with other cache entries.
@@ -42,11 +42,12 @@ class AnalysisCache
     }
 
     /**
-     * Store an analysis result in cache with the default TTL.
+     * Store an analysis result in cache with configurable TTL.
      */
     public static function store(string $hash, array $result): void
     {
-        Cache::put(self::PREFIX . $hash, $result, self::TTL);
+        $ttl = (int) config('ai.cache_ttl', self::DEFAULT_TTL);
+        Cache::put(self::PREFIX . $hash, $result, $ttl);
     }
 
     /**

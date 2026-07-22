@@ -10,18 +10,27 @@ use Illuminate\Support\Facades\Http;
 class GeminiProvider implements AIProvider
 {
     /**
-     * Call Google Gemini model endpoint.
+     * Call Google Gemini model endpoint for structured analysis.
      */
     public function analyze(ProjectContext $context, string $apiKey): array
     {
-        $model = config('ai.providers.gemini.model', 'gemini-1.5-flash');
-        $temperature = (float) config('ai.providers.gemini.temperature', 0.2);
-        $timeout = (int) config('ai.providers.gemini.timeout', 30);
-
         $systemPrompt = RequirementAnalysisPrompt::getSystemPrompt();
         $userMessage = RequirementAnalysisPrompt::getUserMessage($context->toArray());
 
-        // Gemini REST API JSON compilation
+        $text = $this->chat($systemPrompt, $userMessage, $apiKey, true);
+
+        return AnalysisResultValidator::validateAndClean($text);
+    }
+
+    /**
+     * Send a raw system prompt + user message to the Gemini API and return the raw text response.
+     */
+    public function chat(string $systemPrompt, string $userMessage, string $apiKey, bool $expectJson = false): string
+    {
+        $model = config('ai.providers.gemini.model', 'gemini-1.5-flash');
+        $temperature = (float) config('ai.providers.gemini.temperature', 0.2);
+        $timeout = (int) config('ai.providers.gemini.timeout', 40);
+
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
         $payload = [
@@ -40,9 +49,12 @@ class GeminiProvider implements AIProvider
             ],
             'generationConfig' => [
                 'temperature' => $temperature,
-                'responseMimeType' => 'application/json',
             ]
         ];
+
+        if ($expectJson) {
+            $payload['generationConfig']['responseMimeType'] = 'application/json';
+        }
 
         $response = Http::withHeaders([
             'Content-Type' => 'application/json'
@@ -57,8 +69,6 @@ class GeminiProvider implements AIProvider
             throw new \Exception("Empty response candidates returned from Gemini API.");
         }
 
-        $text = $candidates[0]['content']['parts'][0]['text'];
-        
-        return AnalysisResultValidator::validateAndClean($text);
+        return $candidates[0]['content']['parts'][0]['text'];
     }
 }

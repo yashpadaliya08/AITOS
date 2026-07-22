@@ -26,7 +26,16 @@ class ContextCompiler implements EngineInterface
         $frontend     = $projectModel->suggestedTechnologyStack['frontend']  ?? ($state['techStack']['frontend']  ?? 'N/A');
 
         // ---- CURRENT_CONTEXT.md ----
-        $currentContext  = "# {$projectName} — Current AI Context\n\n";
+        $timestamp = date('Y-m-d H:i:s');
+        $tasks = $projectPlan['tasks'] ?? [];
+        $completedTasks = array_filter($tasks, fn($t) => ($t['status'] ?? '') === 'completed');
+        $taskCount = count($tasks);
+        $completedCount = count($completedTasks);
+        $progressPct = $taskCount > 0 ? round(($completedCount / $taskCount) * 100) : 0;
+
+        $currentContext  = "# {$projectName} — Dynamic AI Context\n\n";
+        $currentContext .= "> ⚡ **Sync Status**: Updated at `{$timestamp}` via AITOS Dynamic Context Engine\n";
+        $currentContext .= "> 📊 **Project Progress**: {$completedCount}/{$taskCount} Tasks Completed ({$progressPct}%)\n\n";
         $currentContext .= "## Project Summary\n{$projectModel->projectDescription}\n\n";
         $currentContext .= "## Goal\n{$projectModel->projectGoal}\n\n";
         $currentContext .= "## Active Stack\n- Framework: {$framework}\n- Database: {$database}\n- Frontend: {$frontend}\n\n";
@@ -38,10 +47,18 @@ class ContextCompiler implements EngineInterface
         foreach ($projectModel->businessRules as $rule) {
             $currentContext .= "- {$rule}\n";
         }
-        $currentContext .= "\n## Implementation Phases\n";
-        foreach ($projectModel->implementationPhases as $phase) {
-            $currentContext .= "- {$phase}\n";
+        $currentContext .= "\n## Implementation Phases & Progress\n";
+        if (!empty($tasks)) {
+            foreach ($tasks as $t) {
+                $statusIcon = ($t['status'] ?? '') === 'completed' ? '✅' : '⏳';
+                $currentContext .= "- {$statusIcon} **" . ($t['name'] ?? 'Task') . "** (" . ($t['status'] ?? 'pending') . ")\n";
+            }
+        } else {
+            foreach ($projectModel->implementationPhases as $phase) {
+                $currentContext .= "- ⏳ {$phase}\n";
+            }
         }
+
 
         // ---- BACKEND_CONTEXT.md ----
         $backendContext  = "# Backend Development Context — {$projectName}\n\n";

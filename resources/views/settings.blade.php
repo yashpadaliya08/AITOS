@@ -67,34 +67,40 @@
 
             <!-- AI Engine Configuration -->
             <div class="card aitos-card border-light-subtle shadow-sm mb-4">
-                <div class="aitos-card-header bg-white">
+                <div class="aitos-card-header bg-white d-flex justify-content-between align-items-center">
                     <span class="fw-bold"><i class="bi bi-cpu-fill text-primary me-1"></i> AI Engine Configuration</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-medium"><i class="bi bi-check-circle-fill me-1"></i> Locked & Active</span>
                 </div>
                 <div class="aitos-card-body">
-                    <div class="alert alert-light border small text-muted mb-4">
-                        <i class="bi bi-shield-lock-fill text-secondary me-1"></i> API keys are stored strictly in your local browser storage and are sent only to the local backend during analysis requests.
+                    <div class="alert alert-success border border-success-subtle bg-success-subtle text-dark small mb-4 d-flex align-items-center gap-2">
+                        <i class="bi bi-nvidia text-success fs-5"></i>
+                        <div>
+                            <strong>NVIDIA Nemotron 3 Ultra (free)</strong> is set as your default AI engine via OpenRouter.
+                        </div>
                     </div>
                     
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="keyGemini" class="form-label fw-semibold">Gemini API Key</label>
-                            <input type="password" class="form-control border-light-subtle" id="keyGemini" placeholder="AIzaSy...">
+                            <label for="keyOpenAI" class="form-label fw-semibold">OpenRouter API Key</label>
+                            <input type="password" class="form-control border-light-subtle" id="keyOpenAI" placeholder="sk-or-v1-...">
                         </div>
                         <div class="col-md-6">
-                            <label for="keyOpenAI" class="form-label fw-semibold">OpenAI API Key</label>
-                            <input type="password" class="form-control border-light-subtle" id="keyOpenAI" placeholder="sk-proj-...">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="keyAnthropic" class="form-label fw-semibold">Anthropic API Key</label>
-                            <input type="password" class="form-control border-light-subtle" id="keyAnthropic" placeholder="sk-ant-...">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="keyDefaultProvider" class="form-label fw-semibold">Default AI Provider</label>
-                            <select id="keyDefaultProvider" class="form-select border-light-subtle">
-                                <option value="gemini">Gemini (Default / Recommended)</option>
-                                <option value="openai">OpenAI (gpt-4o-mini)</option>
-                                <option value="anthropic">Anthropic (Claude 3)</option>
+                            <label class="form-label fw-semibold">Default AI Provider</label>
+                            <input type="text" class="form-control border-light-subtle bg-light fw-medium" value="OpenAI / OpenRouter" readonly>
+                            <select id="keyDefaultProvider" class="d-none">
+                                <option value="openai" selected>OpenAI / OpenRouter</option>
                             </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Model Name</label>
+                            <input type="text" class="form-control border-light-subtle bg-light fw-medium" value="NVIDIA: Nemotron 3 Ultra (free)" readonly>
+                            <select id="keyModel" class="d-none">
+                                <option value="nvidia/nemotron-3-ultra-550b-a55b:free" selected>Nemotron 3 Ultra (free)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">OpenRouter Model Slug</label>
+                            <input type="text" class="form-control border-light-subtle bg-light font-monospace small" value="nvidia/nemotron-3-ultra-550b-a55b:free" readonly>
                         </div>
                     </div>
                 </div>
@@ -162,9 +168,82 @@
 
 @section('scripts')
 <script>
+    const MODEL_PRESETS = {
+        gemini: [
+            { value: "gemini-3.5-flash", label: "Gemini 3.5 Flash (Fast - Default)" },
+            { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
+            { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+            { value: "custom", label: "Custom Model ID..." }
+        ],
+        openai: [
+            { value: "google/gemma-4-31b-it:free", label: "Gemma 4 31B - Free (Fast 2s)" },
+            { value: "cohere/north-mini-code:free", label: "Cohere North Code - Free (Fast 3s)" },
+            { value: "qwen/qwen-2.5-coder-32b-instruct", label: "Qwen 2.5 Coder (OpenRouter - 1.4s)" },
+            { value: "qwen/qwen-3-coder-32b-instruct", label: "Qwen 3 Coder (OpenRouter)" },
+            { value: "nvidia/llama-3.1-nemotron-70b-instruct", label: "Nemotron 70B (OpenRouter)" },
+            { value: "gpt-4o-mini", label: "GPT-4o Mini (OpenAI)" },
+            { value: "custom", label: "Custom Model ID..." }
+        ],
+        anthropic: [
+            { value: "claude-3-haiku-20240307", label: "Claude 3 Haiku (Default)" },
+            { value: "claude-3-5-sonnet-20240620", label: "Claude 3.5 Sonnet" },
+            { value: "custom", label: "Custom Model ID..." }
+        ]
+    };
+
     document.addEventListener("DOMContentLoaded", () => {
         loadSettingsFromState();
     });
+
+    function populateModels(provider, selectedModel) {
+        const select = document.getElementById("keyModel");
+        select.innerHTML = "";
+        
+        const presets = MODEL_PRESETS[provider] || [];
+        let isPreset = false;
+        
+        presets.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.value;
+            opt.textContent = p.label;
+            select.appendChild(opt);
+            if (p.value === selectedModel) {
+                isPreset = true;
+            }
+        });
+
+        const customGroup = document.getElementById("customModelGroup");
+        const customInput = document.getElementById("keyCustomModel");
+
+        if (selectedModel && !isPreset) {
+            select.value = "custom";
+            customInput.value = selectedModel;
+            customGroup.classList.remove("d-none");
+        } else {
+            select.value = selectedModel || (presets[0] ? presets[0].value : "");
+            customInput.value = "";
+            customGroup.classList.add("d-none");
+        }
+    }
+
+    function onProviderChange() {
+        const provider = document.getElementById("keyDefaultProvider").value;
+        const state = getProjectState();
+        const model = getModelForProvider(provider, state);
+        populateModels(provider, model);
+    }
+
+    function onModelChange() {
+        const selectVal = document.getElementById("keyModel").value;
+        const customGroup = document.getElementById("customModelGroup");
+        if (selectVal === "custom") {
+            customGroup.classList.remove("d-none");
+            document.getElementById("keyCustomModel").value = "";
+            document.getElementById("keyCustomModel").focus();
+        } else {
+            customGroup.classList.add("d-none");
+        }
+    }
 
     function loadSettingsFromState() {
         const state = getProjectState();
@@ -177,13 +256,11 @@
             document.getElementById("prefGitSync").checked = state.config.git_sync_enabled || false;
         }
 
-        // Load keys
-        if (state.apiKeys) {
-            document.getElementById("keyGemini").value = state.apiKeys.gemini || "";
-            document.getElementById("keyOpenAI").value = state.apiKeys.openai || "";
-            document.getElementById("keyAnthropic").value = state.apiKeys.anthropic || "";
-            document.getElementById("keyDefaultProvider").value = state.apiKeys.defaultProvider || "openai";
-        }
+        // Lock to OpenRouter Nemotron 3 Ultra free
+        state.apiKeys = state.apiKeys || {};
+        state.apiKeys.defaultProvider = "openai";
+        state.apiKeys.openaiModel = "nvidia/nemotron-3-ultra-550b-a55b:free";
+        saveProjectState(state);
     }
 
     function saveSettings() {
@@ -198,13 +275,13 @@
             last_compile_date: new Date().toISOString()
         };
 
-        // Update API keys
-        state.apiKeys = {
-            gemini: document.getElementById("keyGemini").value.trim(),
-            openai: document.getElementById("keyOpenAI").value.trim(),
-            anthropic: document.getElementById("keyAnthropic").value.trim(),
-            defaultProvider: document.getElementById("keyDefaultProvider").value
-        };
+        // Enforce active provider & model
+        state.apiKeys = state.apiKeys || {};
+        if (document.getElementById("keyOpenAI").value.trim() !== "") {
+            state.apiKeys.openai = document.getElementById("keyOpenAI").value.trim();
+        }
+        state.apiKeys.defaultProvider = "openai";
+        state.apiKeys.openaiModel = "nvidia/nemotron-3-ultra-550b-a55b:free";
 
         state.decisions.push({
             date: new Date().toISOString().slice(0, 16).replace('T', ' '),
@@ -214,8 +291,8 @@
 
         saveProjectState(state);
         
-        // Show success alert
-        alert("Settings saved successfully. Layout elements have been re-rendered.");
+        // Show premium toast notification
+        showToast('Settings saved. Engine set to NVIDIA Nemotron 3 Ultra (free).', 'success');
     }
 </script>
 @endsection

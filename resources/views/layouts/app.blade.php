@@ -23,6 +23,12 @@
 </head>
 <body>
 
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Toast Notification Container -->
+    <div class="aitos-toast-container" id="toastContainer"></div>
+
     <div class="app-wrapper">
         <!-- Sidebar Navigation -->
         @include('layouts.sidebar')
@@ -79,7 +85,10 @@
                 gemini: "",
                 openai: "",
                 anthropic: "",
-                defaultProvider: "openai"
+                defaultProvider: "openai",
+                openaiModel: "nvidia/nemotron-3-ultra-550b-a55b:free",
+                geminiModel: "gemini-3.5-flash",
+                anthropicModel: "claude-3-haiku-20240307"
             },
             analysisHash: "",
             
@@ -150,9 +159,30 @@
             let stateStr = localStorage.getItem("aitos_project_state");
             if (!stateStr) {
                 localStorage.setItem("aitos_project_state", JSON.stringify(DEFAULT_PROJECT_STATE));
-                return DEFAULT_PROJECT_STATE;
+                return JSON.parse(JSON.stringify(DEFAULT_PROJECT_STATE));
             }
-            return JSON.parse(stateStr);
+            try {
+                let state = JSON.parse(stateStr);
+                // Ensure apiKeys exists
+                if (!state.apiKeys) {
+                    state.apiKeys = JSON.parse(JSON.stringify(DEFAULT_PROJECT_STATE.apiKeys));
+                }
+                // Enforce OpenRouter Nemotron 3 Ultra free
+                state.apiKeys.defaultProvider = "openai";
+                state.apiKeys.openaiModel = "nvidia/nemotron-3-ultra-550b-a55b:free";
+                localStorage.setItem("aitos_project_state", JSON.stringify(state));
+                return state;
+            } catch (e) {
+                localStorage.setItem("aitos_project_state", JSON.stringify(DEFAULT_PROJECT_STATE));
+                return JSON.parse(JSON.stringify(DEFAULT_PROJECT_STATE));
+            }
+        }
+
+        /**
+         * Always returns the correct model for the given provider.
+         */
+        function getModelForProvider(provider, state) {
+            return "nvidia/nemotron-3-ultra-550b-a55b:free";
         }
 
         // Save current project state
@@ -309,7 +339,70 @@
         // Initialize display
         document.addEventListener("DOMContentLoaded", () => {
             updateLayoutFromState();
+
+            // Mobile Sidebar Toggle
+            const sidebar = document.getElementById('aitosSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const hamburger = document.getElementById('hamburgerToggle');
+            const closeBtn = document.getElementById('sidebarCloseBtn');
+
+            function openSidebar() {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('active');
+            }
+            function closeSidebar() {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+            }
+
+            if (hamburger) hamburger.addEventListener('click', openSidebar);
+            if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+            if (overlay) overlay.addEventListener('click', closeSidebar);
         });
+
+        /**
+         * Global Toast Notification System
+         * Usage: showToast('Settings saved!', 'success')
+         * Types: 'success', 'error', 'warning', 'info'
+         */
+        function showToast(message, type = 'success', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const icons = {
+                success: 'bi-check-circle-fill',
+                error: 'bi-x-circle-fill',
+                warning: 'bi-exclamation-triangle-fill',
+                info: 'bi-info-circle-fill'
+            };
+            const titles = {
+                success: 'Success',
+                error: 'Error',
+                warning: 'Warning',
+                info: 'Info'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `aitos-toast toast-${type}`;
+            toast.innerHTML = `
+                <i class="bi ${icons[type] || icons.info} toast-icon"></i>
+                <div class="toast-body">
+                    <div class="toast-title">${titles[type] || 'Notification'}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.closest('.aitos-toast').remove()">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto-dismiss
+            setTimeout(() => {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
     </script>
     
     @yield('scripts')

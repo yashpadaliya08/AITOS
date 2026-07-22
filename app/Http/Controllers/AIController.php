@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Services\AI\AIProviderFactory;
 use App\Services\AI\DTO\ProjectContext;
@@ -15,11 +14,43 @@ use App\Services\AI\Prompts\BlueprintRefinementPrompt;
 class AIController extends Controller
 {
     /**
+     * Safely override the model config only if the requested model is compatible
+     * with the selected provider. This prevents cross-provider model mismatches
+     * (e.g. sending a Qwen model to the Gemini API).
+     */
+    private function applyModelOverride(Request $request, string $providerName): void
+    {
+        if (!$request->filled('model')) {
+            return;
+        }
+
+        $requestedModel = trim($request->input('model'));
+        if (empty($requestedModel)) {
+            return;
+        }
+
+        $isCompatible = match ($providerName) {
+            'gemini'    => str_contains($requestedModel, 'gemini'),
+            'anthropic' => str_contains($requestedModel, 'claude'),
+            'openai'    => true, // OpenAI/OpenRouter accepts any model identifier
+            default     => true,
+        };
+
+        if ($isCompatible) {
+            config(["ai.providers.{$providerName}.model" => $requestedModel]);
+            Log::info("AIController: Model override applied [{$providerName}] → {$requestedModel}");
+        } else {
+            Log::warning("AIController: Ignoring incompatible model '{$requestedModel}' for provider '{$providerName}'. Using provider default.");
+        }
+    }
+
+    /**
      * Analyze project context and return structured requirements analysis JSON.
      */
     public function analyze(Request $request): JsonResponse
     {
-        ini_set('max_execution_time', 180);
+        ini_set('max_execution_time', 300);
+        set_time_limit(300);
 
         $request->validate([
             'project_name'      => 'required|string|max:255',
@@ -33,6 +64,8 @@ class AIController extends Controller
         $problemStatement = $request->input('problem_statement');
         $providerName     = $request->input('provider', config('ai.default_provider', 'gemini'));
         $apiKey           = $request->input('api_key') ?: config("ai.providers.{$providerName}.api_key");
+
+        $this->applyModelOverride($request, $providerName);
 
         if (empty($apiKey)) {
             return response()->json([
@@ -90,7 +123,8 @@ class AIController extends Controller
      */
     public function refineBlueprint(Request $request): JsonResponse
     {
-        ini_set('max_execution_time', 180);
+        ini_set('max_execution_time', 300);
+        set_time_limit(300);
 
         $request->validate([
             'blueprint_type'    => 'required|string',
@@ -104,6 +138,8 @@ class AIController extends Controller
         $providerName = $request->input('provider', config('ai.default_provider', 'gemini'));
         $apiKey       = $request->input('api_key') ?: config("ai.providers.{$providerName}.api_key");
 
+        $this->applyModelOverride($request, $providerName);
+
         if (empty($apiKey)) {
             return response()->json([
                 'success' => false,
@@ -115,7 +151,8 @@ class AIController extends Controller
         $userMessage  = BlueprintRefinementPrompt::getUserMessage($content, $instruction);
 
         try {
-            $modelResponse = $this->callProvider($providerName, $apiKey, $systemPrompt, $userMessage, false);
+            $provider      = AIProviderFactory::make($providerName);
+            $modelResponse = $provider->chat($systemPrompt, $userMessage, $apiKey, false);
 
             return response()->json([
                 'success'         => true,
@@ -136,7 +173,8 @@ class AIController extends Controller
      */
     public function generateBlueprints(Request $request): JsonResponse
     {
-        ini_set('max_execution_time', 180);
+        ini_set('max_execution_time', 300);
+        set_time_limit(300);
 
         $request->validate([
             'project_name'      => 'required|string|max:255',
@@ -148,6 +186,8 @@ class AIController extends Controller
 
         $providerName = $request->input('provider', config('ai.default_provider', 'gemini'));
         $apiKey       = $request->input('api_key') ?: config("ai.providers.{$providerName}.api_key");
+
+        $this->applyModelOverride($request, $providerName);
 
         if (empty($apiKey)) {
             return response()->json([
@@ -165,7 +205,8 @@ class AIController extends Controller
         );
 
         try {
-            $modelResponse = $this->callProvider($providerName, $apiKey, $systemPrompt, $userMessage, true);
+            $provider      = AIProviderFactory::make($providerName);
+            $modelResponse = $provider->chat($systemPrompt, $userMessage, $apiKey, true);
 
             Log::info("AIController::generateBlueprints raw response [{$providerName}]: " . substr($modelResponse, 0, 500));
 
@@ -195,168 +236,5 @@ class AIController extends Controller
                 'message' => $e->getMessage(),
             ], 400);
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // Private Helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Unified provider call — routes to the correct AI API and returns raw text.
-     *
-     * @param  bool   $expectJson  Whether the call should request a JSON-formatted response.
-     */
-    private function callProvider(
-        string $providerName,
-        string $apiKey,
-        string $systemPrompt,
-        string $userMessage,
-        bool   $expectJson
-    ): string {
-        return match ($providerName) {
-            'openai'    => $this->callOpenAI($apiKey, $systemPrompt, $userMessage, $expectJson),
-            'anthropic' => $this->callAnthropic($apiKey, $systemPrompt, $userMessage),
-            default     => $this->callGemini($apiKey, $systemPrompt, $userMessage, $expectJson),
-        };
-    }
-
-    /**
-     * Call the OpenAI (or OpenRouter) chat completions endpoint.
-     */
-    private function callOpenAI(
-        string $apiKey,
-        string $systemPrompt,
-        string $userMessage,
-        bool   $expectJson
-    ): string {
-        $model   = config('ai.providers.openai.model', 'gpt-4o-mini');
-        $timeout = (int) config('ai.providers.openai.timeout', 120);
-
-        $url     = 'https://api.openai.com/v1/chat/completions';
-        $headers = [
-            'Authorization' => 'Bearer ' . $apiKey,
-            'Content-Type'  => 'application/json',
-        ];
-
-        // OpenRouter compatibility
-        if (str_starts_with($apiKey, 'sk-or-')) {
-            $url                    = 'https://openrouter.ai/api/v1/chat/completions';
-            $headers['HTTP-Referer'] = 'http://localhost';
-            $headers['X-Title']     = 'AITOS';
-
-            if (!str_contains($model, '/')) {
-                $model = str_contains($model, 'gpt-4o-mini') ? 'openai/gpt-4o-mini' : 'google/gemini-2.5-flash';
-            }
-        }
-
-        $maxTokens = str_contains($model, ':free') ? 8000 : 3000;
-
-        $payload = [
-            'model'      => $model,
-            'messages'   => [
-                ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user',   'content' => $userMessage],
-            ],
-            'max_tokens' => $maxTokens,
-        ];
-
-        // Only add response_format for native OpenAI/OpenAI-namespaced models
-        if ($expectJson && (!str_starts_with($apiKey, 'sk-or-') || str_contains($model, 'openai/') || str_contains($model, 'gpt-'))) {
-            $payload['response_format'] = ['type' => 'json_object'];
-        }
-
-        $response = Http::withHeaders($headers)->timeout($timeout)->post($url, $payload);
-
-        if ($response->failed()) {
-            Log::error("OpenAI API request failed: Status {$response->status()} — " . $response->body());
-            throw new \Exception("OpenAI API request failed: " . ($response->json('error.message') ?? $response->body()));
-        }
-
-        $content = $response->json('choices.0.message.content');
-        if (empty($content)) {
-            throw new \Exception("Empty response returned from OpenAI API.");
-        }
-
-        return $content;
-    }
-
-    /**
-     * Call the Anthropic Messages endpoint.
-     */
-    private function callAnthropic(
-        string $apiKey,
-        string $systemPrompt,
-        string $userMessage
-    ): string {
-        $model     = config('ai.providers.anthropic.model', 'claude-3-haiku-20240307');
-        $maxTokens = (int) config('ai.providers.anthropic.max_tokens', 4000);
-        $timeout   = (int) config('ai.providers.anthropic.timeout', 120);
-
-        $response = Http::withHeaders([
-            'x-api-key'         => $apiKey,
-            'anthropic-version' => '2023-06-01',
-            'Content-Type'      => 'application/json',
-        ])->timeout($timeout)->post('https://api.anthropic.com/v1/messages', [
-            'model'      => $model,
-            'max_tokens' => $maxTokens,
-            'system'     => $systemPrompt,
-            'messages'   => [
-                ['role' => 'user', 'content' => $userMessage],
-            ],
-        ]);
-
-        if ($response->failed()) {
-            throw new \Exception("Anthropic API request failed: " . ($response->json('error.message') ?? $response->body()));
-        }
-
-        $content = $response->json('content.0.text');
-        if (empty($content)) {
-            throw new \Exception("Empty response returned from Anthropic API.");
-        }
-
-        return $content;
-    }
-
-    /**
-     * Call the Google Gemini generateContent endpoint.
-     */
-    private function callGemini(
-        string $apiKey,
-        string $systemPrompt,
-        string $userMessage,
-        bool   $expectJson
-    ): string {
-        $model   = config('ai.providers.gemini.model', 'gemini-1.5-flash');
-        $timeout = (int) config('ai.providers.gemini.timeout', 120);
-        $url     = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-
-        $payload = [
-            'contents' => [
-                [
-                    'role'  => 'user',
-                    'parts' => [['text' => $userMessage]],
-                ],
-            ],
-            'systemInstruction' => [
-                'parts' => [['text' => $systemPrompt]],
-            ],
-        ];
-
-        if ($expectJson) {
-            $payload['generationConfig'] = ['responseMimeType' => 'application/json'];
-        }
-
-        $response = Http::timeout($timeout)->post($url, $payload);
-
-        if ($response->failed()) {
-            throw new \Exception("Gemini API request failed: " . ($response->json('error.message') ?? $response->body()));
-        }
-
-        $content = $response->json('candidates.0.content.parts.0.text');
-        if (empty($content)) {
-            throw new \Exception("Empty response returned from Gemini API.");
-        }
-
-        return $content;
     }
 }

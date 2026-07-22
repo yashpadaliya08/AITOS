@@ -1,5 +1,8 @@
 <!-- Sidebar Navigation Component -->
-<div class="aitos-sidebar">
+<div class="aitos-sidebar" id="aitosSidebar">
+    <button class="sidebar-close-btn" id="sidebarCloseBtn" title="Close menu">
+        <i class="bi bi-x-lg"></i>
+    </button>
     <div class="sidebar-brand">
         <!-- Text logo with AI theme styling -->
         <span class="fs-4 fw-bold text-primary d-flex align-items-center gap-2">

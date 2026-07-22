@@ -365,7 +365,8 @@
         const currentHash = await calculateHash(currentText);
 
         const defaultProv = (state.apiKeys && state.apiKeys.defaultProvider) || "openai";
-        const activeKey = state.apiKeys ? state.apiKeys[defaultProv] : "";
+        const activeKey = state.apiKeys ? (state.apiKeys[defaultProv] || '') : '';
+        const activeModel = getModelForProvider(defaultProv, state);
 
         // If hash exists but differs from cached hash, show outdated banner
         if (state.analysisHash && state.analysisHash !== currentHash) {
@@ -406,10 +407,11 @@
         loader.classList.remove("d-none");
         loader.classList.add("d-flex");
         
+        const activeModel = getModelForProvider(provider, state);
         const providersText = {
-            gemini: 'Gemini (1.5-Flash)',
-            openai: 'OpenAI (gpt-4o-mini)',
-            anthropic: 'Anthropic (Claude 3)'
+            gemini: `Gemini (${activeModel})`,
+            openai: `OpenRouter (${activeModel})`,
+            anthropic: `Anthropic (${activeModel})`
         };
         document.getElementById("loadingOverlaySubtitle").innerText = `Sending project context to ${providersText[provider] || 'AI engine'}. This may take 10-15 seconds...`;
 
@@ -427,7 +429,8 @@
                 problem_statement: state.problemStatement,
                 preferred_stack: state.techStack,
                 provider: provider,
-                api_key: apiKey
+                api_key: apiKey,
+                model: getModelForProvider(provider, state)
             })
         })
         .then(response => {
@@ -533,7 +536,7 @@
         const currentHash = await calculateHash(currentText);
 
         const defaultProv = (state.apiKeys && state.apiKeys.defaultProvider) || "openai";
-        const activeKey = state.apiKeys ? state.apiKeys[defaultProv] : "";
+        const activeKey = state.apiKeys ? (state.apiKeys[defaultProv] || '') : '';
 
         if (confirm("Re-analyzing will overwrite current cards with fresh AI findings. Proceed?")) {
             runAIAnalysis(currentHash, activeKey, defaultProv);

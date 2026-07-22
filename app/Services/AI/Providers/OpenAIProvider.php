@@ -6,77 +6,70 @@ use App\Services\AI\DTO\ProjectContext;
 use App\Services\AI\Prompts\RequirementAnalysisPrompt;
 use App\Services\AI\Validators\AnalysisResultValidator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class OpenAIProvider implements AIProvider
 {
     /**
-     * Call OpenAI Chat completions endpoint.
+     * Call OpenAI Chat completions endpoint for structured analysis.
      */
     public function analyze(ProjectContext $context, string $apiKey): array
     {
-        $model = config('ai.providers.openai.model', 'gpt-4o-mini');
-        $temperature = (float) config('ai.providers.openai.temperature', 0.2);
-        $timeout = (int) config('ai.providers.openai.timeout', 30);
-
         $systemPrompt = RequirementAnalysisPrompt::getSystemPrompt();
         $userMessage = RequirementAnalysisPrompt::getUserMessage($context->toArray());
 
-        $url = 'https://api.openai.com/v1/chat/completions';
+        $text = $this->chat($systemPrompt, $userMessage, $apiKey, true);
+
+        return AnalysisResultValidator::validateAndClean($text);
+    }
+
+    /**
+     * Send a raw system prompt + user message to OpenAI/OpenRouter and return the raw text response.
+     */
+    public function chat(string $systemPrompt, string $userMessage, string $apiKey, bool $expectJson = false): string
+    {
+        $apiKey = !empty($apiKey) ? $apiKey : config('ai.providers.openai.api_key');
+        
+        $model = config('ai.providers.openai.model', 'nvidia/nemotron-3-ultra-550b-a55b:free');
+        if (empty($model) || !str_contains($model, '/')) {
+            $model = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+        }
+        
+        $timeout = (int) config('ai.providers.openai.timeout', 240);
+        $maxTokens = (int) config('ai.providers.openai.max_tokens', 4000);
+
+        $url = 'https://openrouter.ai/api/v1/chat/completions';
         $headers = [
             'Authorization' => 'Bearer ' . $apiKey,
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
+            'HTTP-Referer' => 'http://localhost',
+            'X-Title' => 'AITOS',
         ];
 
-        // Check if OpenRouter key is passed
-        if (str_starts_with($apiKey, 'sk-or-')) {
-            $url = 'https://openrouter.ai/api/v1/chat/completions';
-            $headers['HTTP-Referer'] = 'http://localhost';
-            $headers['X-Title'] = 'AITOS';
-
-            // Resolve model to OpenRouter namespaced format
-            if (!str_contains($model, '/')) {
-                if (str_contains($model, 'gpt-4o-mini')) {
-                    $model = 'openai/gpt-4o-mini';
-                } else if (str_contains($model, 'gemini')) {
-                    $model = 'google/gemini-2.5-flash';
-                } else {
-                    $model = 'openai/gpt-4o-mini'; // default fallback
-                }
-            }
-        }
-
-        $maxTokens = 3000;
-        if (str_contains($model, ':free')) {
-            $maxTokens = 8000;
-        }
+        Log::info("OpenAIProvider: Strictly calling OpenRouter model '{$model}' | timeout: {$timeout}s | max_tokens: {$maxTokens}");
 
         $payload = [
             'model' => $model,
             'messages' => [
                 ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user', 'content' => $userMessage]
+                ['role' => 'user', 'content' => $userMessage],
             ],
-            'temperature' => $temperature,
-            'max_tokens' => $maxTokens
+            'max_tokens' => $maxTokens,
         ];
-
-        if (!str_starts_with($apiKey, 'sk-or-') || str_contains($model, 'openai/') || str_contains($model, 'gpt-')) {
-            $payload['response_format'] = ['type' => 'json_object'];
-        }
 
         $response = Http::withHeaders($headers)->timeout($timeout)->post($url, $payload);
 
         if ($response->failed()) {
-            throw new \Exception("OpenAI API request failed: " . ($response->json('error.message') ?? $response->body()));
+            $errMessage = $response->json('error.message') ?? $response->body();
+            Log::error("OpenAIProvider API request failed: Status {$response->status()} — " . $response->body());
+            throw new \Exception("OpenAI API request failed: " . $errMessage);
         }
 
-        $choices = $response->json('choices');
-        if (empty($choices) || !isset($choices[0]['message']['content'])) {
-            throw new \Exception("Empty response choices returned from OpenAI API.");
+        $content = $response->json('choices.0.message.content');
+        if (empty($content)) {
+            throw new \Exception("Empty response returned from OpenRouter ({$model}).");
         }
 
-        $text = $choices[0]['message']['content'];
-
-        return AnalysisResultValidator::validateAndClean($text);
+        return $content;
     }
 }

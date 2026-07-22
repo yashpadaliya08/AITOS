@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\Architect\ArchitectEngine;
+use App\Services\Architect\Engines\ImportEngine;
 use App\Services\Architect\DTO\ManifestDto;
 use App\Services\Architect\Registry\HookSystem;
 use App\Services\Architect\Registry\FrameworkRegistry;
@@ -233,6 +234,49 @@ class ExportController extends Controller
     }
 
     // =========================================================================
+    // PRE-COMPILE PROMPT PREVIEW
+    // =========================================================================
+
+    /**
+     * Preview generated prompt packs for a selected AI model target.
+     * Returns JSON with the prompt file contents so the UI can show a live
+     * preview before the user customizes and downloads the ZIP.
+     */
+    public function previewPrompts(Request $request)
+    {
+        $stateJson = $request->input('project_state');
+        $state = is_string($stateJson) ? json_decode($stateJson, true) : $request->all();
+
+        if (!$state || !isset($state['projectName'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or missing project state.',
+            ], 422);
+        }
+
+        $modelTarget = $request->input('model_target', 'cursor');
+
+        $generator = new \App\Services\Architect\Engines\PromptPackGenerator();
+        $result = $generator->run($state, $modelTarget);
+
+        if (!$result->success) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Prompt generation failed.',
+                'errors'  => $result->errors,
+            ], 500);
+        }
+
+        return response()->json([
+            'success'      => true,
+            'model_target' => $result->data['model_target'],
+            'model_label'  => $result->data['model_label'],
+            'prompts'      => $result->data['files'],
+            'profiles'     => \App\Services\Architect\Engines\PromptPackGenerator::getModelProfiles(),
+        ]);
+    }
+
+    // =========================================================================
     // PROJECT BRIEF EXPORT
     // =========================================================================
 
@@ -437,5 +481,84 @@ class ExportController extends Controller
         }
 
         return implode("\n", $lines);
+    }
+
+    // =========================================================================
+    // PROJECT IMPORT
+    // =========================================================================
+
+    /**
+     * Import an AITOS ZIP package and restore the project state.
+     * This wires up the existing ImportEngine that was previously unreachable.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:zip|max:51200', // 50MB max
+        ]);
+
+        $file = $request->file('file');
+        $tempDir = storage_path('app/temp/import_' . Str::random(8));
+
+        try {
+            // Create temp directory
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+
+            // Move uploaded file to temp location
+            $zipPath = $tempDir . '/import.zip';
+            $file->move($tempDir, 'import.zip');
+
+            // Use the ImportEngine to parse the ZIP
+            $importEngine = new ImportEngine();
+            $restoredState = $importEngine->import($zipPath);
+
+            if (empty($restoredState) || !isset($restoredState['projectName'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The ZIP file does not contain a valid AITOS project package.',
+                ], 422);
+            }
+
+            // Mark imported state flags
+            $restoredState['wizardCompleted'] = true;
+            $restoredState['requirementsApproved'] = !empty($restoredState['requirements']);
+            $restoredState['blueprintApproved'] = !empty($restoredState['blueprints']);
+
+            return response()->json([
+                'success' => true,
+                'state'   => $restoredState,
+                'message' => 'Project imported successfully.',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Import failed: ' . $e->getMessage(),
+            ], 500);
+
+        } finally {
+            // Clean up temp directory
+            if (is_dir($tempDir)) {
+                $this->deleteDirectory($tempDir);
+            }
+        }
+    }
+
+    /**
+     * Recursively delete a directory and its contents.
+     */
+    private function deleteDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) return;
+
+        $items = scandir($dir);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') continue;
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            is_dir($path) ? $this->deleteDirectory($path) : @unlink($path);
+        }
+        @rmdir($dir);
     }
 }

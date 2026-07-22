@@ -296,12 +296,7 @@
     async function generateBlueprintsWithAi() {
         const state = getProjectState();
         const provider = (state.apiKeys && state.apiKeys.defaultProvider) || 'openai';
-        const apiKey = state.apiKeys ? state.apiKeys[provider] : '';
-
-        if (!apiKey) {
-            document.getElementById("apiKeyMissingBanner").classList.remove("d-none");
-            return;
-        }
+        const apiKey = state.apiKeys ? (state.apiKeys[provider] || '') : '';
 
         document.getElementById("apiKeyMissingBanner").classList.add("d-none");
         document.getElementById("blueprintContainer").classList.add("d-none");
@@ -328,7 +323,8 @@
                     problem_statement: state.problemStatement || "",
                     requirements: reqsText,
                     provider: provider,
-                    api_key: apiKey
+                    api_key: apiKey,
+                    model: getModelForProvider(provider, state)
                 })
             });
 
@@ -349,10 +345,21 @@
                 loadBlueprintsData();
                 updateRegistryInfo();
             } else {
-                alert("AI Generation Error: " + (data.message || "Failed to generate blueprints."));
+                loader.classList.add("d-none");
+                loader.classList.remove("d-flex");
+                document.getElementById("blueprintContainer").classList.remove("d-none");
+
+                if (data.message && (data.message.includes("API key") || data.message.includes("missing"))) {
+                    document.getElementById("apiKeyMissingBanner").classList.remove("d-none");
+                } else {
+                    alert("AI Generation Error: " + (data.message || "Failed to generate blueprints."));
+                }
             }
         } catch (err) {
             console.error(err);
+            loader.classList.add("d-none");
+            loader.classList.remove("d-flex");
+            document.getElementById("blueprintContainer").classList.remove("d-none");
             alert("Connection Error: AITOS AI Controller returned an error or timed out. Please check your PHP console or try again.");
         }
     }
@@ -506,7 +513,7 @@
 
         const state = getProjectState();
         const provider = (state.apiKeys && state.apiKeys.defaultProvider) || 'openai';
-        const apiKey = state.apiKeys ? state.apiKeys[provider] : '';
+        const apiKey = state.apiKeys ? (state.apiKeys[provider] || '') : '';
 
         if (!apiKey) {
             alert("No API key configured for the default AI provider. Please configure it in System Settings first!");
@@ -533,7 +540,8 @@
                     blueprint_content: content,
                     instruction: instruction,
                     provider: provider,
-                    api_key: apiKey
+                    api_key: apiKey,
+                    model: getModelForProvider(provider, state)
                 })
             });
 

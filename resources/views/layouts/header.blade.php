@@ -1,14 +1,19 @@
 <!-- Top Header Component -->
 <header class="aitos-header shadow-sm">
-    <div class="header-project-info">
-        <div>
-            <h5 class="header-project-name fw-bold mb-0">
-                <span class="header-project-name-text">Loading Project...</span>
-                <span class="header-project-goal-text text-muted fw-normal fs-6"></span>
-            </h5>
-            <div class="d-flex align-items-center gap-2 mt-1">
-                <span class="badge bg-secondary" style="font-size: 0.7rem;">v1.0.0</span>
-                <span class="phase-badge header-project-phase-text">Checking State...</span>
+    <div class="d-flex align-items-center gap-3">
+        <button class="hamburger-toggle" id="hamburgerToggle" title="Open menu">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="header-project-info">
+            <div>
+                <h5 class="header-project-name fw-bold mb-0">
+                    <span class="header-project-name-text">Loading Project...</span>
+                    <span class="header-project-goal-text text-muted fw-normal fs-6"></span>
+                </h5>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="badge bg-secondary" style="font-size: 0.7rem;">v1.0.0</span>
+                    <span class="phase-badge header-project-phase-text">Checking State...</span>
+                </div>
             </div>
         </div>
     </div>

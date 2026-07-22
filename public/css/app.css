@@ -1020,3 +1020,244 @@ p.text-muted {
         opacity: 1;
     }
 }
+
+/* ==========================================================================
+   Responsive Sidebar — Mobile Support
+   ========================================================================== */
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 99;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+.sidebar-close-btn {
+    display: none;
+    position: absolute;
+    top: 1.25rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: var(--aitos-text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--r-sm);
+    transition: var(--transition);
+    z-index: 10;
+}
+
+.sidebar-close-btn:hover {
+    color: var(--aitos-danger);
+    background-color: rgba(239, 68, 68, 0.08);
+}
+
+.hamburger-toggle {
+    display: none;
+    background: none;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--r-sm);
+    padding: 0.45rem 0.65rem;
+    font-size: 1.25rem;
+    color: var(--aitos-text-dark);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.hamburger-toggle:hover {
+    background-color: #f8fafc;
+    border-color: var(--aitos-primary);
+    color: var(--aitos-primary);
+}
+
+@media (max-width: 991.98px) {
+    .aitos-sidebar {
+        transform: translateX(-100%);
+        z-index: 110;
+        box-shadow: none;
+    }
+
+    .aitos-sidebar.mobile-open {
+        transform: translateX(0);
+        box-shadow: 8px 0 30px rgba(15, 23, 42, 0.15);
+    }
+
+    .sidebar-close-btn {
+        display: block;
+    }
+
+    .hamburger-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .main-container {
+        margin-left: 0 !important;
+    }
+
+    .page-content {
+        padding: 1.5rem;
+    }
+
+    .aitos-header {
+        padding: 1rem 1.5rem;
+    }
+
+    .aitos-footer {
+        padding: 1rem 1.5rem;
+    }
+
+    .header-progress-container {
+        display: none;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-content {
+        padding: 1rem;
+    }
+
+    .display-4 {
+        font-size: 1.75rem !important;
+    }
+
+    .wizard-steps {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .wizard-steps::before,
+    .wizard-progress-bar {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   Toast Notification System
+   ========================================================================== */
+
+.aitos-toast-container {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    pointer-events: none;
+}
+
+.aitos-toast {
+    pointer-events: auto;
+    min-width: 320px;
+    max-width: 420px;
+    padding: 1rem 1.25rem;
+    border-radius: var(--r-md);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    animation: toastSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.3s ease;
+}
+
+.aitos-toast.toast-exit {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+.aitos-toast .toast-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.aitos-toast .toast-body {
+    flex-grow: 1;
+}
+
+.aitos-toast .toast-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.15rem;
+}
+
+.aitos-toast .toast-message {
+    font-size: 0.85rem;
+    color: var(--aitos-text-muted);
+    line-height: 1.45;
+}
+
+.aitos-toast .toast-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0;
+    flex-shrink: 0;
+    transition: var(--transition);
+}
+
+.aitos-toast .toast-close:hover {
+    color: var(--aitos-text-dark);
+}
+
+.aitos-toast.toast-success { border-left: 4px solid var(--aitos-success); }
+.aitos-toast.toast-success .toast-icon { color: var(--aitos-success); }
+
+.aitos-toast.toast-error { border-left: 4px solid var(--aitos-danger); }
+.aitos-toast.toast-error .toast-icon { color: var(--aitos-danger); }
+
+.aitos-toast.toast-warning { border-left: 4px solid var(--aitos-warning); }
+.aitos-toast.toast-warning .toast-icon { color: var(--aitos-warning); }
+
+.aitos-toast.toast-info { border-left: 4px solid var(--aitos-primary); }
+.aitos-toast.toast-info .toast-icon { color: var(--aitos-primary); }
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(60px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ==========================================================================
+   Resume Project Card (Landing Page)
+   ========================================================================== */
+
+.resume-project-card {
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(14, 165, 233, 0.03) 100%);
+    border-radius: var(--r-lg);
+    padding: 1.5rem;
+    transition: var(--transition);
+}
+
+.resume-project-card:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.1);
+}
+

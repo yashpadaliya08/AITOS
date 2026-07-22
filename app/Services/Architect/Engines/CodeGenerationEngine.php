@@ -4,6 +4,7 @@ namespace App\Services\Architect\Engines;
 
 use App\Services\Architect\Contracts\EngineInterface;
 use App\Services\Architect\DTO\EngineResultDto;
+use Illuminate\Support\Str;
 
 class CodeGenerationEngine implements EngineInterface
 {
@@ -17,7 +18,7 @@ class CodeGenerationEngine implements EngineInterface
 
         foreach ($tables as $table) {
             $tableName = $table['name'];
-            $singularName = rtrim($tableName, 's');
+            $singularName = Str::singular($tableName);
             $camelName = str_replace(' ', '', ucwords(str_replace('_', ' ', $singularName)));
 
             $mappings[] = [

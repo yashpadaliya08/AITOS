@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AIController;
 
+use App\Http\Controllers\ContextSyncController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -13,6 +15,8 @@ use App\Http\Controllers\AIController;
 |
 */
 
-Route::post('/analyze',            [AIController::class, 'analyze']);
-Route::post('/refine-blueprint',   [AIController::class, 'refineBlueprint']);
+Route::post('/analyze',             [AIController::class, 'analyze']);
+Route::post('/refine-blueprint',    [AIController::class, 'refineBlueprint']);
 Route::post('/generate-blueprints', [AIController::class, 'generateBlueprints']);
+Route::post('/context/sync',        [ContextSyncController::class, 'sync']);
+
